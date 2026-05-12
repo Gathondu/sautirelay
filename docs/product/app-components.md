@@ -20,7 +20,7 @@ Use Svelte 5 component patterns only. The Svelte rules require runes, CSS Module
 
 Owns the main layout, service status surface, and global error boundary.
 
-### Relay Form
+### Report Form
 
 Captures the report description, category, urgency hint, location mode, manual location text, consent state, and optional follow-up preference. It should emit a typed payload that matches the generated API client.
 
@@ -28,9 +28,9 @@ Captures the report description, category, urgency hint, location mode, manual l
 
 Owns location-mode selection and consent copy. It should support none, manual, and approximate modes without requiring browser geolocation.
 
-### Relay Result
+### Report Result
 
-Displays the structured backend response: relay ID, category, urgency, anonymized summary, safety notes, recommended route, and status.
+Displays the structured backend response: report ID, category, urgency, anonymized summary, safety notes, recommended route, and status.
 
 ### Error Summary
 
@@ -50,25 +50,25 @@ Creates the application, registers routers, and configures CORS for local develo
 
 Exposes `GET /status` for health checks.
 
-### Relay Router
+### Report Router
 
-Exposes `POST /relay`, validates payloads, and returns structured relay responses.
+Exposes `POST /reports`, validates payloads, and returns structured report responses.
 
 ### Schemas
 
 Define request and response models aligned with `backend/app/openapi.yaml`.
 
-### Relay Service
+### Report Service
 
 Normalizes submitted text, redacts sensitive hints, assigns category and urgency, and recommends a route. MVP behavior should be deterministic and testable.
 
 ### Privacy Utilities
 
-Handle redaction and location generalization before a relay item leaves the backend.
+Handle redaction and location generalization before a report item leaves the backend.
 
 ## Test Expectations
 
 - Component tests cover form rendering, validation display, submission loading state, success state, and backend failure state.
-- Backend tests cover status, valid relay submission, invalid payloads, and location consent behavior.
+- Backend tests cover status, valid report submission, invalid payloads, and location consent behavior.
 - Contract changes require regenerated frontend API code.
 - Svelte checks should include `svelte-check`, TypeScript strictness, Vitest behavior tests, and Playwright for future end-to-end coverage.

@@ -18,11 +18,11 @@ Components should be small, focused, and accessible.
 Expected initial components:
 
 - App shell.
-- Relay form.
+- Report form.
 - Location mode selector.
 - Consent section.
 - Error summary.
-- Relay result.
+- Report result.
 - Service status indicator.
 
 ## Accessibility

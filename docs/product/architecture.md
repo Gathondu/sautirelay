@@ -10,8 +10,8 @@ flowchart LR
   UI --> Client["Generated TypeScript API client"]
   Client --> API["FastAPI backend"]
   API --> Contract["backend/app/openapi.yaml"]
-  API --> Relay["Relay service"]
-  Relay --> Result["Structured relay package"]
+  API --> Report["Report service"]
+  Report --> Result["Structured report package"]
   Result --> UI
 ```
 
@@ -24,7 +24,7 @@ flowchart LR
 
 ## Backend Boundary
 
-The backend owns validation, relay structuring, privacy-preserving normalization, and route recommendation. The MVP should keep this deterministic and testable before introducing persistence or provider-backed AI.
+The backend owns validation, report structuring, privacy-preserving normalization, and route recommendation. The MVP should keep this deterministic and testable before introducing persistence or provider-backed AI.
 
 ## Frontend Boundary
 
@@ -38,10 +38,10 @@ Because this repo currently uses Svelte with Vite and a separate FastAPI backend
 
 ## Request Flow
 
-1. Reporter submits a relay form in the Svelte UI.
+1. Reporter submits a report form in the Svelte UI.
 2. UI sends the payload through the generated TypeScript client.
 3. FastAPI validates the request against schemas aligned with the OpenAPI contract.
-4. Relay service produces a structured response.
+4. Report service produces a structured response.
 5. UI displays the result and next-step state.
 
 ## Location Handling
@@ -50,7 +50,7 @@ Location should be optional and purpose-bound. The MVP supports:
 
 - No location.
 - Manual location text such as area, ward, county, district, or nearby landmark.
-- Approximate browser location only after explicit consent, rounded or generalized before relay.
+- Approximate browser location only after explicit consent, rounded or generalized before report.
 
 Precise coordinates should not be stored or displayed by default.
 
@@ -60,7 +60,7 @@ Future deployment may use:
 
 - S3 + CloudFront for frontend hosting.
 - Lambda + API Gateway for backend.
-- Managed database or object storage for relay records.
+- Managed database or object storage for report records.
 - Queue or notification service for responder handoff.
 
 No AWS deployment code should be added until explicitly requested.

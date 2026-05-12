@@ -7,7 +7,7 @@
 ## Initial Endpoints
 
 - `GET /status`
-- `POST /relay`
+- `POST /reports`
 
 Do not add backend endpoints that are not represented in the OpenAPI contract.
 
@@ -27,7 +27,7 @@ Do not add backend endpoints that are not represented in the OpenAPI contract.
 - Do not require precise location.
 - Keep consent fields explicit when location or follow-up contact is involved.
 
-The initial relay request should support:
+The initial report request should support:
 
 - Report description.
 - Optional category hint.
@@ -41,11 +41,11 @@ The initial relay request should support:
 - Return stable response shapes.
 - Include structured error fields.
 - Do not leak internal exception details.
-- Do not include sensitive reporter details in relay responses.
+- Do not include sensitive reporter details in report responses.
 
-The initial relay response should include:
+The initial report response should include:
 
-- Relay ID.
+- Report ID.
 - Status.
 - Category.
 - Urgency.

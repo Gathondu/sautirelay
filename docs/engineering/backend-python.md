@@ -48,10 +48,10 @@ The first implementation pass should keep the structure explicit:
 - `backend/main.py` remains the local entrypoint.
 - `backend/app/main.py` should create the FastAPI app.
 - `backend/app/routers/status.py` should expose `GET /status`.
-- `backend/app/routers/relay.py` should expose `POST /relay`.
-- `backend/app/schemas/relay.py` should define relay request and response models.
+- `backend/app/routers/report.py` should expose `POST /report`.
+- `backend/app/schemas/report.py` should define report request and response models.
 - `backend/app/services/privacy.py` should hold redaction and location-generalization utilities.
-- `backend/app/services/relay.py` should hold deterministic relay structuring logic.
+- `backend/app/services/report.py` should hold deterministic report structuring logic.
 
 ## FastAPI Rules
 
@@ -68,7 +68,7 @@ The first implementation pass should keep the structure explicit:
 - Avoid `Any` unless a boundary requires it and the reason is documented.
 - Prefer explicit models over dynamic dictionaries.
 
-## Privacy And Relay Logic
+## Privacy And Report Logic
 
 The backend is responsible for:
 
@@ -86,8 +86,8 @@ Keep MVP behavior deterministic until provider-backed AI is introduced intention
 Use pytest and cover:
 
 - `/status`.
-- Valid relay submission.
-- Invalid relay submission.
+- Valid report submission.
+- Invalid report submission.
 - Location consent behavior.
 - Privacy redaction behavior.
 - Contract alignment.
