@@ -3,15 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from backend.app.core.models import (
+    AiApiResult,
     AuthenticatedUser,
     EscalationDocument,
-    AiApiResult,
     ReportCreateRequest,
     ReportCreateResponse,
     ReportDocument,
     ReportListResponse,
     ReportProcessResponse,
-    RelayCompatibilityRequest,
     SafeStatusResponse,
     VerificationRequest,
 )
@@ -27,15 +26,6 @@ async def create_report(
     workflow: Annotated[WorkflowService, Depends(get_workflow_service)],
 ) -> ReportCreateResponse:
     return await workflow.submit_report(request)
-
-
-@router.post("/relay", response_model=ReportCreateResponse, status_code=status.HTTP_201_CREATED, deprecated=True)
-async def create_report_from_deprecated_relay(
-    request: RelayCompatibilityRequest,
-    workflow: Annotated[WorkflowService, Depends(get_workflow_service)],
-) -> ReportCreateResponse:
-    report_request = ReportCreateRequest(text=request.description)
-    return await workflow.submit_report(report_request)
 
 
 @router.get("/reports/status/{trackingCode}", response_model=SafeStatusResponse)

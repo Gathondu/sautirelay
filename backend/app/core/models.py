@@ -145,14 +145,6 @@ class ReportCreateRequest(ApiModel):
     consent: ConsentInput = Field(default_factory=ConsentInput)
 
 
-class RelayCompatibilityRequest(ApiModel):
-    description: str = Field(min_length=10, max_length=5000)
-    categoryHint: str | None = None
-    urgencyHint: str | None = None
-    location: dict[str, object] = Field(default_factory=dict)
-    consent: dict[str, object] = Field(default_factory=dict)
-
-
 class ReportCreateResponse(ApiModel):
     report_id: str
     tracking_code: str
@@ -217,6 +209,7 @@ class AiApiResult(ApiModel):
 
 
 class ReportDocument(ApiModel):
+    model_config = ConfigDict(populate_by_name=True)
     id: str = Field(alias="reportId")
     public_tracking_code: str = Field(alias="trackingCode")
     submitted_at: datetime
@@ -265,6 +258,7 @@ class VerificationDocument(ApiModel):
 
 
 class SignalClusterDocument(ApiModel):
+    model_config = ConfigDict(populate_by_name=True)
     id: str = Field(alias="clusterId")
     title: str
     category: ReportCategory
@@ -307,6 +301,7 @@ class EscalationCreateRequest(ApiModel):
 
 
 class EscalationDocument(ApiModel):
+    model_config = ConfigDict(populate_by_name=True)
     id: str = Field(alias="escalationId")
     cluster_id: str | None = None
     report_id: str | None = None
@@ -335,6 +330,7 @@ class OutcomeCreateRequest(ApiModel):
 
 
 class OutcomeDocument(ApiModel):
+    model_config = ConfigDict(populate_by_name=True)
     id: str = Field(alias="outcomeId")
     escalation_id: str
     outcome_type: OutcomeType

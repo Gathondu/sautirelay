@@ -1,6 +1,5 @@
 import re
 import secrets
-from datetime import datetime
 from uuid import uuid4
 
 from fastapi import HTTPException, status
@@ -41,8 +40,8 @@ class WorkflowService:
     async def submit_report(self, request: ReportCreateRequest) -> ReportCreateResponse:
         now = utc_now()
         report = ReportDocument(
-            id=self._id("report"),
-            public_tracking_code=self._tracking_code(),
+            reportId=self._id("report"),
+            trackingCode=self._tracking_code(),
             submitted_at=now,
             channel=request.channel,
             language=request.language,
@@ -235,7 +234,7 @@ class WorkflowService:
         escalation = await self.get_escalation(escalation_id, actor)
         now = utc_now()
         outcome = OutcomeDocument(
-            id=self._id("outcome"),
+            outcomeId=self._id("outcome"),
             escalation_id=escalation.id,
             outcome_type=request.outcome_type,
             notes=request.notes,
@@ -298,7 +297,7 @@ class WorkflowService:
             await self._repository.put_report(report.model_copy(update={"cluster_id": cluster.id, "updated_at": now}))
             return
         cluster = SignalClusterDocument(
-            id=self._id("cluster"),
+            clusterId=self._id("cluster"),
             title=f"Possible {str(report.category).replace('_', ' ').title()}",
             category=report.category,
             region=region,
@@ -372,7 +371,7 @@ class WorkflowService:
             "Suggested response: Verify safely with trusted local peace actors and avoid public accusation."
         )
         return EscalationDocument(
-            id=self._id("escalation"),
+            escalationId=self._id("escalation"),
             cluster_id=cluster.id if cluster is not None else None,
             report_id=report.id if report is not None else None,
             assigned_to=request.assigned_to,
