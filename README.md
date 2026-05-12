@@ -14,19 +14,20 @@ The app is planned as a local-first Svelte 5 + FastAPI project. The frontend use
 
 ## Documentation
 
-- Project plan: [PLAN.md](C:/Users/dng/Development/sautirelay/PLAN.md:1)
-- Product docs: [docs/product/README.md](C:/Users/dng/Development/sautirelay/docs/product/README.md:1)
-- Product brief: [docs/product/product-brief.md](C:/Users/dng/Development/sautirelay/docs/product/product-brief.md:1)
-- Architecture: [docs/product/architecture.md](C:/Users/dng/Development/sautirelay/docs/product/architecture.md:1)
-- User flows: [docs/product/user-flows.md](C:/Users/dng/Development/sautirelay/docs/product/user-flows.md:1)
-- App components: [docs/product/app-components.md](C:/Users/dng/Development/sautirelay/docs/product/app-components.md:1)
-- Backend design: [docs/backend-design.md](C:/Users/dng/Development/sautirelay/docs/backend-design.md:1)
-- API contract workflow: [docs/api-contract.md](C:/Users/dng/Development/sautirelay/docs/api-contract.md:1)
-- Engineering standards: [docs/engineering/README.md](C:/Users/dng/Development/sautirelay/docs/engineering/README.md:1)
-- Development rules: [docs/development-rules.md](C:/Users/dng/Development/sautirelay/docs/development-rules.md:1)
-- Local development: [docs/local-dev.md](C:/Users/dng/Development/sautirelay/docs/local-dev.md:1)
-- Future infrastructure notes: [infra/README.md](C:/Users/dng/Development/sautirelay/infra/README.md:1)
-- Agent instructions: [AGENTS.md](C:/Users/dng/Development/sautirelay/AGENTS.md:1)
+- Project plan: [PLAN.md](PLAN.md)
+- Docs table of contents: [docs/README.md](docs/README.md)
+- Product docs: [docs/product/README.md](docs/product/README.md)
+- Product brief: [docs/product/product-brief.md](docs/product/product-brief.md)
+- Product architecture: [docs/product/architecture.md](docs/product/architecture.md)
+- User flows: [docs/product/user-flows.md](docs/product/user-flows.md)
+- App components: [docs/product/app-components.md](docs/product/app-components.md)
+- Engineering standards: [docs/engineering/README.md](docs/engineering/README.md)
+- Engineering architecture: [docs/engineering/architecture.md](docs/engineering/architecture.md)
+- API conventions: [docs/engineering/api-conventions.md](docs/engineering/api-conventions.md)
+- Backend standards: [docs/engineering/backend-python.md](docs/engineering/backend-python.md)
+- Local development: [docs/engineering/local-development.md](docs/engineering/local-development.md)
+- Future infrastructure notes: [infra/README.md](infra/README.md)
+- Agent instructions: [AGENTS.md](AGENTS.md)
 
 ## Local Development
 
