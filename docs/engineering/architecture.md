@@ -9,8 +9,9 @@ sautirelay/
 |- frontend/                 # Svelte 5 + Vite, pnpm
 |- backend/                  # FastAPI, uv
 |- docker/                   # Local Docker assets
-|- docs/                     # Product and engineering documentation
-|  \- engineering/           # Canonical engineering standards
+|- docs/                     # Documentation index
+|  |- product/               # Product documentation
+|  \- engineering/          # Canonical engineering standards
 |- .cursor/rules/            # Cursor adapters to engineering standards
 |- infra/                    # Future infrastructure notes only
 |- AGENTS.md                 # Portable AI/contributor entrypoint

@@ -41,6 +41,18 @@ backend/
 
 Add repositories only when persistence is introduced.
 
+## Initial MVP Layout
+
+The first implementation pass should keep the structure explicit:
+
+- `backend/main.py` remains the local entrypoint.
+- `backend/app/main.py` should create the FastAPI app.
+- `backend/app/routers/status.py` should expose `GET /status`.
+- `backend/app/routers/relay.py` should expose `POST /relay`.
+- `backend/app/schemas/relay.py` should define relay request and response models.
+- `backend/app/services/privacy.py` should hold redaction and location-generalization utilities.
+- `backend/app/services/relay.py` should hold deterministic relay structuring logic.
+
 ## FastAPI Rules
 
 - Keep route handlers thin.

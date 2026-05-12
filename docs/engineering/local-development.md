@@ -1,10 +1,10 @@
-# SautiRelay Local Development
+# Local Development Workflow
 
 ## Prerequisites
 
 - Node.js with `pnpm`.
 - Python with `uv`.
-- Docker Desktop or compatible Docker runtime for Compose validation.
+- Docker Desktop or a compatible Docker runtime for Compose validation.
 
 ## Frontend
 
@@ -25,7 +25,7 @@ pnpm test
 pnpm exec svelte-check
 ```
 
-The project-local Cursor Svelte rules require `pnpm` for all frontend package operations.
+The project rule set requires `pnpm` for all frontend package operations.
 
 ## Backend
 
@@ -52,7 +52,7 @@ Run from the repository root:
 docker compose -f docker/docker-compose.yml up
 ```
 
-Use this after meaningful cross-service changes. If Dockerfiles are not present yet, complete the Docker phase in `PLAN.md` before treating Compose as validated.
+Use this after meaningful cross-service changes. If Dockerfiles are not present yet, complete the Docker phase in `PLAN.md` before treating Compose as fully validated.
 
 ## Environment
 
@@ -60,7 +60,7 @@ Local defaults belong in `.env.example`. Secrets and real deployment values shou
 
 ## Troubleshooting
 
-- If frontend cannot reach backend, check `VITE_API_BASE_URL`.
-- If backend does not start, run `uv sync` and confirm dependencies in `backend/pyproject.toml`.
+- If the frontend cannot reach the backend, check `VITE_API_BASE_URL`.
+- If the backend does not start, run `uv sync` and confirm dependencies in `backend/pyproject.toml`.
 - If generated API types are stale, regenerate them from `backend/app/openapi.yaml`.
 - If Compose build paths fail, verify contexts in `docker/docker-compose.yml` are relative to the compose file location.

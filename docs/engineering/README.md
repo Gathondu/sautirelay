@@ -8,6 +8,7 @@ Editor-specific files, including `.cursor/rules/*.mdc`, should point here instea
 
 - [Principles](principles.md): durable team norms and decision rules.
 - [Architecture](architecture.md): repository boundaries and service ownership.
+- [Local Development](local-development.md): prerequisites, run commands, Docker workflow, and troubleshooting.
 - [Coding Standards](coding-standards.md): cross-language implementation rules.
 - [Frontend Svelte](frontend-svelte.md): Svelte 5, Vite, TypeScript, CSS Modules, and pnpm rules.
 - [Backend Python](backend-python.md): Python, FastAPI, and uv rules.
@@ -33,3 +34,5 @@ Editor-specific files, including `.cursor/rules/*.mdc`, should point here instea
 - Backend dependency and execution tool: `uv`.
 - Contract: `backend/app/openapi.yaml`.
 - Deployment: local-first; AWS deployment code is deferred.
+
+Product context lives separately in [../product/README.md](../product/README.md). The root docs table of contents lives in [../README.md](../README.md).

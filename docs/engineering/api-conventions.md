@@ -27,12 +27,44 @@ Do not add backend endpoints that are not represented in the OpenAPI contract.
 - Do not require precise location.
 - Keep consent fields explicit when location or follow-up contact is involved.
 
+The initial relay request should support:
+
+- Report description.
+- Optional category hint.
+- Optional urgency hint.
+- Location mode.
+- Manual location text or approximate location data when consent exists.
+- Optional follow-up preference in later phases.
+
 ## Response Rules
 
 - Return stable response shapes.
 - Include structured error fields.
 - Do not leak internal exception details.
 - Do not include sensitive reporter details in relay responses.
+
+The initial relay response should include:
+
+- Relay ID.
+- Status.
+- Category.
+- Urgency.
+- Anonymized summary.
+- Safety notes.
+- Recommended route.
+- Location confidence.
+
+## Error Shape
+
+Document API errors with a consistent JSON structure such as:
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "Report description is required.",
+  "field": "description"
+}
+```
 
 ## Compatibility
 
@@ -43,3 +75,5 @@ Do not add backend endpoints that are not represented in the OpenAPI contract.
 ## Generated Client
 
 Generated client code belongs in `frontend/src/api/`. Do not hand-edit generated files.
+
+The exact generator can be selected during implementation, but the generated output must stay under `frontend/src/api/`.
