@@ -1,0 +1,215 @@
+.page {
+  min-height: calc(100vh - 3.75rem);
+  display: grid;
+  grid-template-columns: minmax(18rem, 24rem) 1fr;
+  background:
+    radial-gradient(circle at top left, rgba(246, 199, 94, 0.32), transparent 28%),
+    radial-gradient(circle at top right, rgba(33, 111, 92, 0.2), transparent 24%),
+    linear-gradient(180deg, #f5efe2 0%, #f1eadb 40%, #ebe1cf 100%);
+  color: #17312d;
+}
+
+.sidebar {
+  border-right: 1px solid rgba(23, 49, 45, 0.12);
+  background: rgba(255, 251, 243, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.sidebarInner {
+  position: sticky;
+  top: 0;
+  padding: 2rem 1.25rem 2rem 1.5rem;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8c5a2b;
+}
+
+.brand {
+  margin: 0;
+  font-size: clamp(1.8rem, 2vw, 2.4rem);
+  line-height: 0.95;
+}
+
+.intro {
+  margin: 0.85rem 0 1.6rem;
+  color: #4c5c58;
+  line-height: 1.5;
+}
+
+.nav {
+  display: grid;
+  gap: 1rem;
+}
+
+.group {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a756f;
+}
+
+.docLink {
+  appearance: none;
+  border: 1px solid rgba(23, 49, 45, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: inherit;
+  text-align: left;
+  border-radius: 8px;
+  padding: 0.85rem 0.95rem;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.docLink:hover,
+.docLink:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(23, 49, 45, 0.24);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 24px rgba(86, 67, 38, 0.08);
+}
+
+.docLinkActive {
+  border-color: rgba(140, 90, 43, 0.45);
+  background: linear-gradient(135deg, rgba(255, 238, 208, 0.98), rgba(248, 245, 236, 0.98));
+  box-shadow: 0 12px 24px rgba(140, 90, 43, 0.12);
+}
+
+.docTitle {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.docSummary {
+  display: block;
+  color: #5e6d68;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.content {
+  padding: 2rem clamp(1.1rem, 3vw, 3rem) 3rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+}
+
+.pathLabel {
+  margin: 0;
+  color: #8c5a2b;
+  font-size: 0.9rem;
+  font-family: 'IBM Plex Mono', 'Fira Code', monospace;
+}
+
+.title {
+  margin: 0.35rem 0 0;
+  font-size: clamp(2rem, 3vw, 3.4rem);
+  line-height: 0.95;
+}
+
+.article {
+  max-width: 56rem;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.82);
+  border: 1px solid rgba(23, 49, 45, 0.1);
+  box-shadow: 0 24px 60px rgba(46, 44, 30, 0.08);
+  line-height: 1.7;
+}
+
+.article :global(h1),
+.article :global(h2),
+.article :global(h3) {
+  line-height: 1.05;
+  margin-top: 1.6em;
+  margin-bottom: 0.55em;
+}
+
+.article :global(h1:first-child) {
+  margin-top: 0;
+}
+
+.article :global(p),
+.article :global(ul),
+.article :global(ol),
+.article :global(pre) {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.article :global(code) {
+  font-family: 'IBM Plex Mono', 'Fira Code', monospace;
+  font-size: 0.92em;
+  background: rgba(23, 49, 45, 0.08);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+}
+
+.article :global(pre) {
+  overflow-x: auto;
+  background: #18302c;
+  color: #f7efe1;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.article :global(pre code) {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.article :global(a) {
+  color: #8c5a2b;
+}
+
+.article :global(blockquote) {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border-left: 4px solid rgba(140, 90, 43, 0.5);
+  background: rgba(246, 199, 94, 0.12);
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid rgba(23, 49, 45, 0.12);
+  }
+
+  .sidebarInner {
+    position: static;
+    max-height: none;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+}
+

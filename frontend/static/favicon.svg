@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SautiRelay Docs">
+  <rect width="64" height="64" rx="16" fill="#17312d" />
+  <path d="M18 18h20c6.627 0 12 5.373 12 12v16H30c-6.627 0-12-5.373-12-12V18Z" fill="#f4c96c" />
+  <path d="M22 22h16c4.418 0 8 3.582 8 8v12H30c-4.418 0-8-3.582-8-8V22Z" fill="#fff8ec" />
+  <path d="M28 28h12M28 34h12M28 40h8" stroke="#17312d" stroke-width="3" stroke-linecap="round" />
+</svg>
