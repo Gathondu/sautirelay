@@ -1,0 +1,40 @@
+# Node / frontend
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/dist/
+frontend/.vite/
+pnpm-debug.log*
+
+# Python / backend
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# uv
+uv.lock
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build / coverage
+coverage/
+htmlcov/
+.coverage
+
+# Logs
+*.log
