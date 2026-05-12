@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
-
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _PHONE_RE = re.compile(
     r"(?<!\w)(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}(?!\w)"
@@ -148,9 +147,9 @@ def _as_dict(value: object) -> dict[str, object]:
     if isinstance(value, dict):
         return value
     if hasattr(value, "model_dump"):
-        return value.model_dump()
+        return getattr(value, 'model_dump')()
     if hasattr(value, "dict"):
-        return value.dict()
+        return getattr(value, 'dict')()
     if hasattr(value, "__dict__"):
         return vars(value)
     return {}

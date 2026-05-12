@@ -6,40 +6,12 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
-try:
-    from pydantic import BaseModel, Field
-except ModuleNotFoundError:
-    class _FieldSpec:
-        def __init__(self, default: object = None, default_factory: object = None, **_: object) -> None:
-            self.default = default
-            self.default_factory = default_factory
-
-        def value(self) -> object:
-            if self.default_factory is not None and callable(self.default_factory):
-                return self.default_factory()
-            return self.default
-
-    def Field(default: object = None, default_factory: object = None, **kwargs: object) -> _FieldSpec:
-        return _FieldSpec(default=default, default_factory=default_factory, **kwargs)
-
-    class BaseModel:
-        def __init__(self, **data: object) -> None:
-            annotations = getattr(self, "__annotations__", {})
-            for name in annotations:
-                default = getattr(self.__class__, name, None)
-                if isinstance(default, _FieldSpec):
-                    value = data.get(name, default.value())
-                else:
-                    value = data.get(name, default)
-                setattr(self, name, value)
-
-        def model_dump(self) -> dict[str, object]:
-            return dict(vars(self))
+from openai import OpenAI
+from pydantic import BaseModel, Field
 
 from .clustering import EmbeddingService
 from .privacy import redact_sensitive_info, safe_location_view
 from .risk import score_risk
-
 
 DEFAULT_INTAKE_MODEL = "gpt-5.5"
 
@@ -140,7 +112,7 @@ class OpenAIIntakeService:
         *,
         model: str | None = None,
         api_key: str | None = None,
-        client: object | None = None,
+        client: OpenAI | None = None,
         embedding_service: EmbeddingService | None = None,
     ) -> None:
         self.model = model or os.getenv("SAUTIRELAY_OPENAI_MODEL", DEFAULT_INTAKE_MODEL)
@@ -201,11 +173,7 @@ class OpenAIIntakeService:
         category_hint: str | None,
         urgency_hint: str | None,
     ) -> IntakeStructuredOutput:
-        client = self.client
-        if client is None:
-            from openai import OpenAI
-
-            client = OpenAI(api_key=self.api_key)
+        client = self.client or OpenAI(api_key=self.api_key)
         location_view = safe_location_view(location, visibility="mediator")
         response = client.responses.parse(
             model=self.model,
@@ -542,7 +510,12 @@ def _time_sensitivity_for(signal: object) -> str:
 
 
 def _fallback_signal_summary(signal: object, reports: list[object]) -> str:
-    report_count = len(reports) if reports else int(_get(signal, "report_count", 1) or 1)
+    def safe_int(val, default=1) -> int:
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+    report_count = len(reports) if reports else safe_int(_get(signal, "report_count", 1))
     category = _normalize_category(_get(signal, "category")) or "NOT_SURE"
     return (
         f"{report_count} anonymous signal(s) indicate a possible "
@@ -554,11 +527,11 @@ def _public_dict(value: object) -> dict[str, Any]:
     if isinstance(value, dict):
         data = dict(value)
     elif hasattr(value, "to_dict"):
-        data = value.to_dict()
+        data = getattr(value, 'to_dict')()
     elif hasattr(value, "model_dump"):
-        data = value.model_dump()
+        data = getattr(value, 'model_dump')()
     elif hasattr(value, "dict"):
-        data = value.dict()
+        data = getattr(value, 'dict')()
     elif hasattr(value, "__dict__"):
         data = vars(value)
     else:

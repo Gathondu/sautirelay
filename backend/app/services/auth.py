@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import json
 from datetime import datetime, timedelta, timezone
-from typing import TypedDict
+from typing import Any, Mapping, TypedDict
 
 from fastapi import HTTPException, status
 
@@ -21,8 +21,8 @@ class TokenClaims(TypedDict):
 
 class AuthService:
     def __init__(self, settings: Settings) -> None:
-        self._settings = settings
-        self._users = {
+        self._settings: Settings = settings
+        self._users: Mapping[str, AuthenticatedUser] = {
             settings.verifier_username: AuthenticatedUser(
                 id="user_verifier_local",
                 username=settings.verifier_username,
@@ -36,7 +36,7 @@ class AuthService:
                 organization_id="org_local_mediation_network",
             ),
         }
-        self._passwords = {
+        self._passwords: dict[str, str] = {
             settings.verifier_username: settings.verifier_password,
             settings.mediator_username: settings.mediator_password,
         }
@@ -113,7 +113,7 @@ class AuthService:
         return self._b64_bytes(digest)
 
     @staticmethod
-    def _b64_json(value: dict[str, object]) -> str:
+    def _b64_json(value: Mapping[str, Any]) -> str:
         encoded = json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
         return AuthService._b64_bytes(encoded)
 

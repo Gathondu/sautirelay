@@ -7,7 +7,6 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Iterable, Sequence
 
-
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_VECTOR_DIMENSIONS = 96
 DEFAULT_SIMILARITY_THRESHOLD = 0.72

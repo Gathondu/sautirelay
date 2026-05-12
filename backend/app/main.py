@@ -24,7 +24,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="SautiRelay API",
         version="0.1.0",
-        description="Local-first backend for anonymous SautiRelay signal reporting and mediator escalation.",
+        description="API for anonymous SautiRelay signal reporting and mediator escalation.",
         lifespan=lifespan,
     )
     app.include_router(status.router)
