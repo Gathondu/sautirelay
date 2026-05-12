@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -10,19 +9,18 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 
 VERIFIER_CREDENTIALS = {
-    "email": "verifier@sautirelay.local",
-    "password": "verifier-local-pass",
+    "email": "verifier@sautirelay.dev",
+    "password": "verifier-dev-pass",
 }
 MEDIATOR_CREDENTIALS = {
-    "email": "mediator@sautirelay.local",
-    "password": "mediator-local-pass",
+    "email": "mediator@sautirelay.dev",
+    "password": "mediator-dev-pass",
 }
 
 

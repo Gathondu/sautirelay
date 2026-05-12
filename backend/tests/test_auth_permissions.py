@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 from conftest import (
     MEDIATOR_CREDENTIALS,
     VERIFIER_CREDENTIALS,
@@ -11,6 +9,7 @@ from conftest import (
     mediator_headers,
     verifier_headers,
 )
+from fastapi.testclient import TestClient
 
 
 def test_seeded_verifier_can_login(client: TestClient) -> None:
@@ -26,7 +25,7 @@ def test_seeded_mediator_can_login(client: TestClient) -> None:
 def test_invalid_credentials_fail_without_token(client: TestClient) -> None:
     response = client.post(
         "/auth/login",
-        json={"email": "verifier@sautirelay.local", "password": "wrong-password"},
+        json={"email": "verifier@sautirelay.dev", "password": "wrong-password"},
     )
     payload = assert_json_response(response, 401)
     assert "accessToken" not in payload

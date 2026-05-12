@@ -49,8 +49,8 @@ paths:
             examples:
               verifier:
                 value:
-                  username: verifier@sautirelay.local
-                  password: verifier-local-password
+                  username: verifier@sautirelay.dev
+                  password: verifier-dev-password
       responses:
         "200":
           description: Login succeeded.
@@ -600,10 +600,30 @@ components:
       enum: [UNKNOWN, ROUTINE, THIS_WEEK, WITHIN_24_HOURS, IMMEDIATE]
     ReportStatus:
       type: string
-      enum: [NEW, PROCESSING, PENDING_REVIEW, NEEDS_MORE_INFO, VERIFIED, ESCALATED, DUPLICATE, DISMISSED, ARCHIVED, RESOLVED]
+      enum:
+        [
+          NEW,
+          PROCESSING,
+          PENDING_REVIEW,
+          NEEDS_MORE_INFO,
+          VERIFIED,
+          ESCALATED,
+          DUPLICATE,
+          DISMISSED,
+          ARCHIVED,
+          RESOLVED,
+        ]
     ReporterSafeStatus:
       type: string
-      enum: [Received, Under review, Verified, Escalated to trusted mediator, Closed, Unable to verify]
+      enum:
+        [
+          Received,
+          Under review,
+          Verified,
+          Escalated to trusted mediator,
+          Closed,
+          Unable to verify,
+        ]
     Channel:
       type: string
       enum: [pwa, sms_simulated, chat_simulated]
@@ -634,7 +654,8 @@ components:
           $ref: "#/components/schemas/LocationPrecision"
     LocationVisibility:
       type: object
-      required: [internalArea, mediatorArea, analyticsArea, publicArea, precision]
+      required:
+        [internalArea, mediatorArea, analyticsArea, publicArea, precision]
       properties:
         internalArea:
           type: string
@@ -706,7 +727,20 @@ components:
           type: string
     AiIntakeResult:
       type: object
-      required: [category, riskLevel, urgency, summary, redactedText, translatedText, recommendedMediatorAction, confidence, needsHumanReview, safetyWarnings, reasoningSummary]
+      required:
+        [
+          category,
+          riskLevel,
+          urgency,
+          summary,
+          redactedText,
+          translatedText,
+          recommendedMediatorAction,
+          confidence,
+          needsHumanReview,
+          safetyWarnings,
+          reasoningSummary,
+        ]
       properties:
         category:
           $ref: "#/components/schemas/ReportCategory"
@@ -738,7 +772,19 @@ components:
           type: string
     ReportSummary:
       type: object
-      required: [reportId, trackingCode, submittedAt, status, category, riskLevel, urgency, location, aiConfidence, similarReportCount]
+      required:
+        [
+          reportId,
+          trackingCode,
+          submittedAt,
+          status,
+          category,
+          riskLevel,
+          urgency,
+          location,
+          aiConfidence,
+          similarReportCount,
+        ]
       properties:
         reportId:
           type: string
@@ -768,7 +814,16 @@ components:
       allOf:
         - $ref: "#/components/schemas/ReportSummary"
         - type: object
-          required: [channel, language, redactedText, translatedText, aiSummary, safetyWarnings, auditEvents]
+          required:
+            [
+              channel,
+              language,
+              redactedText,
+              translatedText,
+              aiSummary,
+              safetyWarnings,
+              auditEvents,
+            ]
           properties:
             channel:
               $ref: "#/components/schemas/Channel"
@@ -829,7 +884,16 @@ components:
             type: string
     VerificationDecision:
       type: string
-      enum: [VERIFIED, NEEDS_MORE_INFO, DUPLICATE, UNVERIFIED_RUMOR, DISMISSED, ESCALATE_IMMEDIATELY, ARCHIVED]
+      enum:
+        [
+          VERIFIED,
+          NEEDS_MORE_INFO,
+          DUPLICATE,
+          UNVERIFIED_RUMOR,
+          DISMISSED,
+          ESCALATE_IMMEDIATELY,
+          ARCHIVED,
+        ]
     VerificationRequest:
       type: object
       required: [decision, notes, confidence]
@@ -864,7 +928,8 @@ components:
             type: string
     VerificationResponse:
       type: object
-      required: [verificationId, entityType, entityId, decision, status, createdAt]
+      required:
+        [verificationId, entityType, entityId, decision, status, createdAt]
       properties:
         verificationId:
           type: string
@@ -882,10 +947,32 @@ components:
           format: date-time
     ClusterStatus:
       type: string
-      enum: [NEW, PENDING_REVIEW, VERIFIED, ESCALATED, DISMISSED, ARCHIVED, RESOLVED]
+      enum:
+        [
+          NEW,
+          PENDING_REVIEW,
+          VERIFIED,
+          ESCALATED,
+          DISMISSED,
+          ARCHIVED,
+          RESOLVED,
+        ]
     ClusterSummary:
       type: object
-      required: [clusterId, title, category, region, riskLevel, summary, reportCount, firstSeenAt, lastSeenAt, confidence, status]
+      required:
+        [
+          clusterId,
+          title,
+          category,
+          region,
+          riskLevel,
+          summary,
+          reportCount,
+          firstSeenAt,
+          lastSeenAt,
+          confidence,
+          status,
+        ]
       properties:
         clusterId:
           type: string
@@ -918,7 +1005,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/ClusterSummary"
         - type: object
-          required: [reportIds, recommendedMediatorAction, safetyWarnings, auditEvents]
+          required:
+            [reportIds, recommendedMediatorAction, safetyWarnings, auditEvents]
           properties:
             reportIds:
               type: array
@@ -947,7 +1035,15 @@ components:
           minimum: 0
     EscalationStatus:
       type: string
-      enum: [PENDING_ACCEPTANCE, ACCEPTED, ACTION_TAKEN, FOLLOW_UP_NEEDED, RESOLVED, CLOSED]
+      enum:
+        [
+          PENDING_ACCEPTANCE,
+          ACCEPTED,
+          ACTION_TAKEN,
+          FOLLOW_UP_NEEDED,
+          RESOLVED,
+          CLOSED,
+        ]
     EscalationCreateRequest:
       type: object
       required: [mediatorId, actionBrief, safetyNote, urgency, followUpDueAt]
@@ -971,7 +1067,16 @@ components:
           format: date-time
     EscalationSummary:
       type: object
-      required: [escalationId, clusterId, mediatorId, actionBrief, urgency, status, sentAt]
+      required:
+        [
+          escalationId,
+          clusterId,
+          mediatorId,
+          actionBrief,
+          urgency,
+          status,
+          sentAt,
+        ]
       properties:
         escalationId:
           type: string
@@ -994,7 +1099,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/EscalationSummary"
         - type: object
-          required: [safetyNote, approximateArea, recommendedActions, fieldNotes]
+          required:
+            [safetyNote, approximateArea, recommendedActions, fieldNotes]
           properties:
             mediatorOrganizationId:
               type: [string, "null"]
@@ -1032,7 +1138,17 @@ components:
           minimum: 0
     OutcomeType:
       type: string
-      enum: [DIALOGUE_HELD, REFERRED_TO_PARTNER, FALSE_ALARM, RISK_REDUCED, VIOLENCE_OCCURRED, NEEDS_FOLLOW_UP, NO_ACTION_POSSIBLE, OTHER]
+      enum:
+        [
+          DIALOGUE_HELD,
+          REFERRED_TO_PARTNER,
+          FALSE_ALARM,
+          RISK_REDUCED,
+          VIOLENCE_OCCURRED,
+          NEEDS_FOLLOW_UP,
+          NO_ACTION_POSSIBLE,
+          OTHER,
+        ]
     OutcomeCreateRequest:
       type: object
       required: [outcomeType, notes, deescalated, followUpRequired]
@@ -1055,7 +1171,17 @@ components:
           format: date-time
     OutcomeDetail:
       type: object
-      required: [outcomeId, escalationId, outcomeType, notes, deescalated, followUpRequired, recordedBy, createdAt]
+      required:
+        [
+          outcomeId,
+          escalationId,
+          outcomeType,
+          notes,
+          deescalated,
+          followUpRequired,
+          recordedBy,
+          createdAt,
+        ]
       properties:
         outcomeId:
           type: string
@@ -1090,7 +1216,17 @@ components:
           minimum: 0
     DashboardMetricsResponse:
       type: object
-      required: [reportsByCategory, reportsByRegion, riskLevels, activeClusters, escalatedSignals, resolvedSignals, averageVerificationHours, averageMediatorResponseHours]
+      required:
+        [
+          reportsByCategory,
+          reportsByRegion,
+          riskLevels,
+          activeClusters,
+          escalatedSignals,
+          resolvedSignals,
+          averageVerificationHours,
+          averageMediatorResponseHours,
+        ]
       properties:
         reportsByCategory:
           type: array

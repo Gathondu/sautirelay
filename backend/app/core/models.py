@@ -299,7 +299,7 @@ class ClusterListResponse(ApiModel):
 
 
 class EscalationCreateRequest(ApiModel):
-    assigned_to: str = Field(default="mediator@sautirelay.local", validation_alias=AliasChoices("assigned_to", "assignedTo", "mediatorId"), min_length=3, max_length=200)
+    assigned_to: str = Field(default="mediator@sautirelay.dev", validation_alias=AliasChoices("assigned_to", "assignedTo", "mediatorId"), min_length=3, max_length=200)
     assigned_organization: str = Field(default="Local mediation network", validation_alias=AliasChoices("assigned_organization", "assignedOrganization", "mediatorOrganizationId"), min_length=2, max_length=200)
     urgency: Urgency = Urgency.within_24_hours
     safety_note: str = Field(default="Do not disclose reporter details.", max_length=1000)
