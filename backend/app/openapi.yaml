@@ -1,15 +1,26 @@
 openapi: 3.1.0
 info:
   title: SautiRelay API
-  version: 0.1.0
-  description: Local-first API contract for anonymous community signal relay.
+  version: 0.2.0
+  description: Contract-first local API for anonymous reports, verifier review, mediator escalation, outcomes, and privacy-safe metrics.
 servers:
   - url: http://localhost:8000
+security:
+  - bearerAuth: []
+tags:
+  - name: status
+  - name: auth
+  - name: reports
+  - name: clusters
+  - name: escalations
+  - name: dashboard
 paths:
   /status:
     get:
+      tags: [status]
       summary: Check backend health
       operationId: getStatus
+      security: []
       responses:
         "200":
           description: Backend is reachable.
@@ -22,185 +33,1109 @@ paths:
                   value:
                     status: ok
                     service: sautirelay
-  /relay:
+                    version: 0.2.0
+  /auth/login:
     post:
-      summary: Submit a community signal for structured relay
-      operationId: createRelay
+      tags: [auth]
+      summary: Log in as a seeded verifier or mediator user
+      operationId: login
+      security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RelayRequest"
+              $ref: "#/components/schemas/LoginRequest"
             examples:
-              manualLocation:
+              verifier:
                 value:
-                  description: "There are rising tensions near the market after a public meeting."
-                  categoryHint: conflict_risk
-                  urgencyHint: medium
+                  username: verifier@sautirelay.local
+                  password: verifier-local-password
+      responses:
+        "200":
+          description: Login succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /reports:
+    post:
+      tags: [reports]
+      summary: Submit an anonymous community report
+      operationId: createReport
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportCreateRequest"
+            examples:
+              waterConflict:
+                value:
+                  channel: pwa
+                  language: en
+                  categoryHint: WATER_OR_RESOURCE_CONFLICT
+                  timeframe: WITHIN_24_HOURS
+                  immediateDanger: true
+                  description: There are rumors that youth may block herders from the water point tomorrow.
                   location:
-                    mode: manual
-                    manualDescription: "Near central market, Kisumu County"
+                    country: Sudan
+                    adminLevel1: Darfur
+                    areaDescription: El Fasher area
+                    precision: COARSE
+                    landmark: water point
                   consent:
-                    location: true
-                    followUp: false
+                    safetyNoticeAccepted: true
+                    dataUseAccepted: true
+                    shareWithMediator: true
       responses:
         "201":
-          description: Relay item was accepted and structured.
+          description: Report was received safely.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RelayResponse"
+                $ref: "#/components/schemas/ReportCreateResponse"
         "422":
-          description: Request validation failed.
+          $ref: "#/components/responses/ValidationError"
+    get:
+      tags: [reports]
+      summary: List reports for verifier review
+      operationId: listReports
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ReportStatus"
+        - name: riskLevel
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/RiskLevel"
+      responses:
+        "200":
+          description: Report queue.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ReportListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /reports/status/{trackingCode}:
+    get:
+      tags: [reports]
+      summary: Check anonymous report status
+      operationId: getReportStatus
+      security: []
+      parameters:
+        - name: trackingCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^SR-[A-Z0-9]{5,12}$"
+      responses:
+        "200":
+          description: Reporter-safe status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /reports/{reportId}:
+    get:
+      tags: [reports]
+      summary: Get verifier report detail
+      operationId: getReport
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      responses:
+        "200":
+          description: Report detail for verifier review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /reports/{reportId}/process:
+    post:
+      tags: [reports]
+      summary: Process a report with intake AI
+      operationId: processReport
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      responses:
+        "200":
+          description: AI-assisted intake result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportProcessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /reports/{reportId}/verify:
+    post:
+      tags: [reports]
+      summary: Record a verifier decision for a report
+      operationId: verifyReport
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificationRequest"
+      responses:
+        "200":
+          description: Verification decision recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidTransition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /clusters:
+    get:
+      tags: [clusters]
+      summary: List signal clusters for verifier review
+      operationId: listClusters
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ClusterStatus"
+      responses:
+        "200":
+          description: Cluster queue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusterListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /clusters/{clusterId}:
+    get:
+      tags: [clusters]
+      summary: Get signal cluster detail
+      operationId: getCluster
+      parameters:
+        - $ref: "#/components/parameters/ClusterId"
+      responses:
+        "200":
+          description: Cluster detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusterDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /clusters/{clusterId}/verify:
+    post:
+      tags: [clusters]
+      summary: Record a verifier decision for a signal cluster
+      operationId: verifyCluster
+      parameters:
+        - $ref: "#/components/parameters/ClusterId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificationRequest"
+      responses:
+        "200":
+          description: Cluster verification decision recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidTransition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /clusters/{clusterId}/escalate:
+    post:
+      tags: [clusters]
+      summary: Escalate a verified cluster to a mediator
+      operationId: escalateCluster
+      parameters:
+        - $ref: "#/components/parameters/ClusterId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EscalationCreateRequest"
+      responses:
+        "201":
+          description: Escalation created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationDetail"
+        "400":
+          $ref: "#/components/responses/InvalidTransition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /escalations:
+    get:
+      tags: [escalations]
+      summary: List mediator escalations
+      operationId: listEscalations
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EscalationStatus"
+      responses:
+        "200":
+          description: Mediator escalation queue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /escalations/{escalationId}:
+    get:
+      tags: [escalations]
+      summary: Get mediator action brief
+      operationId: getEscalation
+      parameters:
+        - $ref: "#/components/parameters/EscalationId"
+      responses:
+        "200":
+          description: Mediator action brief.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /escalations/{escalationId}/accept:
+    post:
+      tags: [escalations]
+      summary: Accept a mediator escalation assignment
+      operationId: acceptEscalation
+      parameters:
+        - $ref: "#/components/parameters/EscalationId"
+      responses:
+        "200":
+          description: Escalation accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalationDetail"
+        "400":
+          $ref: "#/components/responses/InvalidTransition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /escalations/{escalationId}/outcome:
+    post:
+      tags: [escalations]
+      summary: Record a mediator outcome
+      operationId: createEscalationOutcome
+      parameters:
+        - $ref: "#/components/parameters/EscalationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutcomeCreateRequest"
+      responses:
+        "201":
+          description: Outcome recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutcomeDetail"
+        "400":
+          $ref: "#/components/responses/InvalidTransition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /dashboard/metrics:
+    get:
+      tags: [dashboard]
+      summary: Get privacy-safe aggregate dashboard metrics
+      operationId: getDashboardMetrics
+      responses:
+        "200":
+          description: Aggregate metrics with no raw report content.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardMetricsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /relay:
+    post:
+      tags: [reports]
+      summary: Deprecated compatibility endpoint for anonymous report submission
+      operationId: createRelayDeprecated
+      deprecated: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportCreateRequest"
+      responses:
+        "201":
+          description: Report was received safely.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportCreateResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ReportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 8
+    ClusterId:
+      name: clusterId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 8
+    EscalationId:
+      name: escalationId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 8
+  responses:
+    Unauthorized:
+      description: Authentication is required or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Current user role cannot access this resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InvalidTransition:
+      description: Requested workflow transition is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     StatusResponse:
       type: object
-      required:
-        - status
-        - service
+      required: [status, service, version]
       properties:
         status:
           type: string
-          enum:
-            - ok
+          enum: [ok]
         service:
           type: string
-          example: sautirelay
-    RelayRequest:
-      type: object
-      required:
-        - description
-        - location
-        - consent
-      properties:
-        description:
+          const: sautirelay
+        version:
           type: string
-          minLength: 20
-          maxLength: 5000
-        categoryHint:
-          $ref: "#/components/schemas/RelayCategory"
-        urgencyHint:
-          $ref: "#/components/schemas/Urgency"
-        location:
-          $ref: "#/components/schemas/LocationInput"
-        consent:
-          $ref: "#/components/schemas/ConsentInput"
-    LocationInput:
-      type: object
-      required:
-        - mode
-      properties:
-        mode:
-          type: string
-          enum:
-            - none
-            - manual
-            - approximate
-        manualDescription:
-          type: string
-          maxLength: 500
-        approximate:
-          $ref: "#/components/schemas/ApproximateLocation"
-    ApproximateLocation:
-      type: object
-      properties:
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        accuracyMeters:
-          type: number
-          format: double
-    ConsentInput:
-      type: object
-      required:
-        - location
-        - followUp
-      properties:
-        location:
-          type: boolean
-        followUp:
-          type: boolean
-    RelayResponse:
-      type: object
-      required:
-        - relayId
-        - status
-        - category
-        - urgency
-        - anonymizedSummary
-        - safetyNotes
-        - recommendedRoute
-        - locationConfidence
-      properties:
-        relayId:
-          type: string
-          example: relay_local_001
-        status:
-          type: string
-          enum:
-            - accepted
-            - needs_review
-        category:
-          $ref: "#/components/schemas/RelayCategory"
-        urgency:
-          $ref: "#/components/schemas/Urgency"
-        anonymizedSummary:
-          type: string
-        safetyNotes:
-          type: array
-          items:
-            type: string
-        recommendedRoute:
-          type: string
-          example: community_mediator_review
-        locationConfidence:
-          type: string
-          enum:
-            - none
-            - low
-            - medium
-            - high
-    RelayCategory:
-      type: string
-      enum:
-        - unsure
-        - conflict_risk
-        - civic_accountability
-        - public_service
-        - aid_diversion
-        - displacement
-        - gbv_referral
-        - resource_protection
-        - other
-    Urgency:
-      type: string
-      enum:
-        - low
-        - medium
-        - high
-        - immediate
     ErrorResponse:
       type: object
-      required:
-        - code
-        - message
+      required: [code, message]
       properties:
         code:
           type: string
-          example: VALIDATION_ERROR
+          examples: [VALIDATION_ERROR]
         message:
           type: string
         field:
-          type: string
+          type: [string, "null"]
         details:
           type: object
           additionalProperties: true
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 8
+          writeOnly: true
+    AuthTokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          const: bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+        user:
+          $ref: "#/components/schemas/UserSummary"
+    UserSummary:
+      type: object
+      required: [userId, name, role, organizationId, active]
+      properties:
+        userId:
+          type: string
+        name:
+          type: string
+        email:
+          type: [string, "null"]
+          format: email
+        role:
+          $ref: "#/components/schemas/UserRole"
+        organizationId:
+          type: string
+        active:
+          type: boolean
+    UserRole:
+      type: string
+      enum: [VERIFIER, MEDIATOR, ANALYST, ADMIN]
+    ReportCategory:
+      type: string
+      enum:
+        - LAND_CONFLICT
+        - WATER_OR_RESOURCE_CONFLICT
+        - HATE_SPEECH_OR_INCITEMENT
+        - ARMED_GROUP_MOVEMENT
+        - ELECTION_INTIMIDATION
+        - DISPLACEMENT_RISK
+        - GBV_OR_PROTECTION_RISK
+        - POLICE_OR_SECURITY_ABUSE
+        - AID_DIVERSION
+        - PUBLIC_SERVICE_FAILURE
+        - RESOURCE_EXPLOITATION
+        - COMMUNITY_RUMOR
+        - OTHER
+        - NOT_SURE
+    RiskLevel:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+    Urgency:
+      type: string
+      enum: [UNKNOWN, ROUTINE, THIS_WEEK, WITHIN_24_HOURS, IMMEDIATE]
+    ReportStatus:
+      type: string
+      enum: [NEW, PROCESSING, PENDING_REVIEW, NEEDS_MORE_INFO, VERIFIED, ESCALATED, DUPLICATE, DISMISSED, ARCHIVED, RESOLVED]
+    ReporterSafeStatus:
+      type: string
+      enum: [Received, Under review, Verified, Escalated to trusted mediator, Closed, Unable to verify]
+    Channel:
+      type: string
+      enum: [pwa, sms_simulated, chat_simulated]
+    LocationPrecision:
+      type: string
+      enum: [NONE, COARSE, FIVE_TO_TEN_KM, EXACT_IF_SAFE]
+    SafeLocationInput:
+      type: object
+      required: [areaDescription, precision]
+      properties:
+        country:
+          type: [string, "null"]
+          maxLength: 120
+        adminLevel1:
+          type: [string, "null"]
+          maxLength: 160
+        adminLevel2:
+          type: [string, "null"]
+          maxLength: 160
+        areaDescription:
+          type: string
+          minLength: 2
+          maxLength: 500
+        landmark:
+          type: [string, "null"]
+          maxLength: 240
+        precision:
+          $ref: "#/components/schemas/LocationPrecision"
+    LocationVisibility:
+      type: object
+      required: [internalArea, mediatorArea, analyticsArea, publicArea, precision]
+      properties:
+        internalArea:
+          type: string
+        mediatorArea:
+          type: string
+        analyticsArea:
+          type: string
+        publicArea:
+          type: string
+        precision:
+          $ref: "#/components/schemas/LocationPrecision"
+    ConsentInput:
+      type: object
+      required: [safetyNoticeAccepted, dataUseAccepted, shareWithMediator]
+      properties:
+        safetyNoticeAccepted:
+          type: boolean
+        dataUseAccepted:
+          type: boolean
+        shareWithMediator:
+          type: boolean
+        consentVersion:
+          type: string
+          default: "2026-05-12"
+    ReportCreateRequest:
+      type: object
+      required: [description, location, consent]
+      properties:
+        channel:
+          $ref: "#/components/schemas/Channel"
+          default: pwa
+        language:
+          type: string
+          minLength: 2
+          maxLength: 16
+          default: en
+        categoryHint:
+          anyOf:
+            - $ref: "#/components/schemas/ReportCategory"
+            - type: "null"
+        timeframe:
+          $ref: "#/components/schemas/Urgency"
+          default: UNKNOWN
+        immediateDanger:
+          type: boolean
+          default: false
+        description:
+          type: string
+          minLength: 10
+          maxLength: 5000
+        location:
+          $ref: "#/components/schemas/SafeLocationInput"
+        consent:
+          $ref: "#/components/schemas/ConsentInput"
+    ReportCreateResponse:
+      type: object
+      required: [reportId, trackingCode, status, safeStatus, message]
+      properties:
+        reportId:
+          type: string
+        trackingCode:
+          type: string
+          examples: [SR-8K42P]
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        safeStatus:
+          $ref: "#/components/schemas/ReporterSafeStatus"
+        message:
+          type: string
+    AiIntakeResult:
+      type: object
+      required: [category, riskLevel, urgency, summary, redactedText, translatedText, recommendedMediatorAction, confidence, needsHumanReview, safetyWarnings, reasoningSummary]
+      properties:
+        category:
+          $ref: "#/components/schemas/ReportCategory"
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        urgency:
+          $ref: "#/components/schemas/Urgency"
+        summary:
+          type: string
+        redactedText:
+          type: string
+        translatedText:
+          type: string
+        detectedLanguage:
+          type: [string, "null"]
+        recommendedMediatorAction:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        needsHumanReview:
+          type: boolean
+        safetyWarnings:
+          type: array
+          items:
+            type: string
+        reasoningSummary:
+          type: string
+    ReportSummary:
+      type: object
+      required: [reportId, trackingCode, submittedAt, status, category, riskLevel, urgency, location, aiConfidence, similarReportCount]
+      properties:
+        reportId:
+          type: string
+        trackingCode:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        category:
+          $ref: "#/components/schemas/ReportCategory"
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        urgency:
+          $ref: "#/components/schemas/Urgency"
+        location:
+          $ref: "#/components/schemas/LocationVisibility"
+        aiConfidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        similarReportCount:
+          type: integer
+          minimum: 0
+    ReportDetail:
+      allOf:
+        - $ref: "#/components/schemas/ReportSummary"
+        - type: object
+          required: [channel, language, redactedText, translatedText, aiSummary, safetyWarnings, auditEvents]
+          properties:
+            channel:
+              $ref: "#/components/schemas/Channel"
+            language:
+              type: string
+            redactedText:
+              type: string
+            translatedText:
+              type: string
+            aiSummary:
+              type: string
+            safetyWarnings:
+              type: array
+              items:
+                type: string
+            relatedReportIds:
+              type: array
+              items:
+                type: string
+            auditEvents:
+              type: array
+              items:
+                $ref: "#/components/schemas/AuditEvent"
+    ReportListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportSummary"
+        total:
+          type: integer
+          minimum: 0
+    ReportStatusResponse:
+      type: object
+      required: [trackingCode, safeStatus, message]
+      properties:
+        trackingCode:
+          type: string
+        safeStatus:
+          $ref: "#/components/schemas/ReporterSafeStatus"
+        message:
+          type: string
+    ReportProcessResponse:
+      type: object
+      required: [reportId, status, intake, clusterIds]
+      properties:
+        reportId:
+          type: string
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        intake:
+          $ref: "#/components/schemas/AiIntakeResult"
+        clusterIds:
+          type: array
+          items:
+            type: string
+    VerificationDecision:
+      type: string
+      enum: [VERIFIED, NEEDS_MORE_INFO, DUPLICATE, UNVERIFIED_RUMOR, DISMISSED, ESCALATE_IMMEDIATELY, ARCHIVED]
+    VerificationRequest:
+      type: object
+      required: [decision, notes, confidence]
+      properties:
+        decision:
+          $ref: "#/components/schemas/VerificationDecision"
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 3000
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        adjustedCategory:
+          anyOf:
+            - $ref: "#/components/schemas/ReportCategory"
+            - type: "null"
+        adjustedRiskLevel:
+          anyOf:
+            - $ref: "#/components/schemas/RiskLevel"
+            - type: "null"
+        adjustedLocation:
+          anyOf:
+            - $ref: "#/components/schemas/LocationVisibility"
+            - type: "null"
+        recommendedMediatorId:
+          type: [string, "null"]
+        safetyConcerns:
+          type: array
+          items:
+            type: string
+    VerificationResponse:
+      type: object
+      required: [verificationId, entityType, entityId, decision, status, createdAt]
+      properties:
+        verificationId:
+          type: string
+        entityType:
+          type: string
+          enum: [REPORT, CLUSTER]
+        entityId:
+          type: string
+        decision:
+          $ref: "#/components/schemas/VerificationDecision"
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ClusterStatus:
+      type: string
+      enum: [NEW, PENDING_REVIEW, VERIFIED, ESCALATED, DISMISSED, ARCHIVED, RESOLVED]
+    ClusterSummary:
+      type: object
+      required: [clusterId, title, category, region, riskLevel, summary, reportCount, firstSeenAt, lastSeenAt, confidence, status]
+      properties:
+        clusterId:
+          type: string
+        title:
+          type: string
+        category:
+          $ref: "#/components/schemas/ReportCategory"
+        region:
+          type: string
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        summary:
+          type: string
+        reportCount:
+          type: integer
+          minimum: 1
+        firstSeenAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        status:
+          $ref: "#/components/schemas/ClusterStatus"
+    ClusterDetail:
+      allOf:
+        - $ref: "#/components/schemas/ClusterSummary"
+        - type: object
+          required: [reportIds, recommendedMediatorAction, safetyWarnings, auditEvents]
+          properties:
+            reportIds:
+              type: array
+              items:
+                type: string
+            recommendedMediatorAction:
+              type: string
+            safetyWarnings:
+              type: array
+              items:
+                type: string
+            auditEvents:
+              type: array
+              items:
+                $ref: "#/components/schemas/AuditEvent"
+    ClusterListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClusterSummary"
+        total:
+          type: integer
+          minimum: 0
+    EscalationStatus:
+      type: string
+      enum: [PENDING_ACCEPTANCE, ACCEPTED, ACTION_TAKEN, FOLLOW_UP_NEEDED, RESOLVED, CLOSED]
+    EscalationCreateRequest:
+      type: object
+      required: [mediatorId, actionBrief, safetyNote, urgency, followUpDueAt]
+      properties:
+        mediatorId:
+          type: string
+        mediatorOrganizationId:
+          type: [string, "null"]
+        actionBrief:
+          type: string
+          minLength: 20
+          maxLength: 5000
+        safetyNote:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        urgency:
+          $ref: "#/components/schemas/Urgency"
+        followUpDueAt:
+          type: string
+          format: date-time
+    EscalationSummary:
+      type: object
+      required: [escalationId, clusterId, mediatorId, actionBrief, urgency, status, sentAt]
+      properties:
+        escalationId:
+          type: string
+        clusterId:
+          type: string
+        reportId:
+          type: [string, "null"]
+        mediatorId:
+          type: string
+        actionBrief:
+          type: string
+        urgency:
+          $ref: "#/components/schemas/Urgency"
+        status:
+          $ref: "#/components/schemas/EscalationStatus"
+        sentAt:
+          type: string
+          format: date-time
+    EscalationDetail:
+      allOf:
+        - $ref: "#/components/schemas/EscalationSummary"
+        - type: object
+          required: [safetyNote, approximateArea, recommendedActions, fieldNotes]
+          properties:
+            mediatorOrganizationId:
+              type: [string, "null"]
+            safetyNote:
+              type: string
+            approximateArea:
+              type: string
+            recommendedActions:
+              type: array
+              items:
+                type: string
+            fieldNotes:
+              type: array
+              items:
+                type: string
+            acceptedAt:
+              type: [string, "null"]
+              format: date-time
+            resolvedAt:
+              type: [string, "null"]
+              format: date-time
+            followUpDueAt:
+              type: [string, "null"]
+              format: date-time
+    EscalationListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EscalationSummary"
+        total:
+          type: integer
+          minimum: 0
+    OutcomeType:
+      type: string
+      enum: [DIALOGUE_HELD, REFERRED_TO_PARTNER, FALSE_ALARM, RISK_REDUCED, VIOLENCE_OCCURRED, NEEDS_FOLLOW_UP, NO_ACTION_POSSIBLE, OTHER]
+    OutcomeCreateRequest:
+      type: object
+      required: [outcomeType, notes, deescalated, followUpRequired]
+      properties:
+        outcomeType:
+          $ref: "#/components/schemas/OutcomeType"
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        deescalated:
+          type: boolean
+        followUpRequired:
+          type: boolean
+        safetyConcerns:
+          type: [string, "null"]
+          maxLength: 2000
+        nextReviewAt:
+          type: [string, "null"]
+          format: date-time
+    OutcomeDetail:
+      type: object
+      required: [outcomeId, escalationId, outcomeType, notes, deescalated, followUpRequired, recordedBy, createdAt]
+      properties:
+        outcomeId:
+          type: string
+        escalationId:
+          type: string
+        outcomeType:
+          $ref: "#/components/schemas/OutcomeType"
+        notes:
+          type: string
+        deescalated:
+          type: boolean
+        followUpRequired:
+          type: boolean
+        recordedBy:
+          type: string
+        safetyConcerns:
+          type: [string, "null"]
+        nextReviewAt:
+          type: [string, "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    MetricCount:
+      type: object
+      required: [label, count]
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    DashboardMetricsResponse:
+      type: object
+      required: [reportsByCategory, reportsByRegion, riskLevels, activeClusters, escalatedSignals, resolvedSignals, averageVerificationHours, averageMediatorResponseHours]
+      properties:
+        reportsByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricCount"
+        reportsByRegion:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricCount"
+        riskLevels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricCount"
+        activeClusters:
+          type: integer
+          minimum: 0
+        escalatedSignals:
+          type: integer
+          minimum: 0
+        resolvedSignals:
+          type: integer
+          minimum: 0
+        averageVerificationHours:
+          type: number
+          minimum: 0
+        averageMediatorResponseHours:
+          type: number
+          minimum: 0
+    AuditEvent:
+      type: object
+      required: [auditId, action, entityType, entityId, createdAt]
+      properties:
+        auditId:
+          type: string
+        actorId:
+          type: [string, "null"]
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
