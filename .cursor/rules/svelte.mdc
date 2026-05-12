@@ -1,0 +1,25 @@
+---
+description: Cursor adapter for SautiRelay frontend rules.
+globs: frontend/**/*.{svelte,ts,js,css}
+alwaysApply: true
+---
+
+# Frontend Rule Adapter
+
+Read these canonical docs before editing frontend code:
+
+- `docs/engineering/principles.md`
+- `docs/engineering/frontend-svelte.md`
+- `docs/engineering/coding-standards.md`
+- `docs/engineering/design-system.md`
+- `docs/engineering/testing.md`
+- `docs/engineering/security.md` when handling user input, location, privacy, or AI behavior
+
+Project-specific reminders:
+
+- Use Svelte 5 with runes.
+- Use Vite, not SvelteKit, unless the project explicitly changes direction.
+- Use `pnpm`.
+- Use CSS Modules.
+- Do not use `export let`, legacy `on:` directives, Tailwind, or mixed package managers.
+- Keep non-trivial logic out of `.svelte` files.

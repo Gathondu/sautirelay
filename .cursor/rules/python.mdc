@@ -1,0 +1,23 @@
+---
+description: Cursor adapter for SautiRelay Python backend rules.
+globs: backend/**/*.py
+alwaysApply: true
+---
+
+# Python Rule Adapter
+
+Read these canonical docs before editing backend Python code:
+
+- `docs/engineering/principles.md`
+- `docs/engineering/backend-python.md`
+- `docs/engineering/coding-standards.md`
+- `docs/engineering/testing.md`
+- `docs/engineering/security.md`
+
+Project-specific reminders:
+
+- Use typed Python.
+- Keep route handlers thin.
+- Put business logic in services.
+- Validate inputs early.
+- Do not add persistence or deployment code unless requested.

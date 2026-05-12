@@ -1,0 +1,206 @@
+openapi: 3.1.0
+info:
+  title: SautiRelay API
+  version: 0.1.0
+  description: Local-first API contract for anonymous community signal relay.
+servers:
+  - url: http://localhost:8000
+paths:
+  /status:
+    get:
+      summary: Check backend health
+      operationId: getStatus
+      responses:
+        "200":
+          description: Backend is reachable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    service: sautirelay
+  /relay:
+    post:
+      summary: Submit a community signal for structured relay
+      operationId: createRelay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelayRequest"
+            examples:
+              manualLocation:
+                value:
+                  description: "There are rising tensions near the market after a public meeting."
+                  categoryHint: conflict_risk
+                  urgencyHint: medium
+                  location:
+                    mode: manual
+                    manualDescription: "Near central market, Kisumu County"
+                  consent:
+                    location: true
+                    followUp: false
+      responses:
+        "201":
+          description: Relay item was accepted and structured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelayResponse"
+        "422":
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    StatusResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+        service:
+          type: string
+          example: sautirelay
+    RelayRequest:
+      type: object
+      required:
+        - description
+        - location
+        - consent
+      properties:
+        description:
+          type: string
+          minLength: 20
+          maxLength: 5000
+        categoryHint:
+          $ref: "#/components/schemas/RelayCategory"
+        urgencyHint:
+          $ref: "#/components/schemas/Urgency"
+        location:
+          $ref: "#/components/schemas/LocationInput"
+        consent:
+          $ref: "#/components/schemas/ConsentInput"
+    LocationInput:
+      type: object
+      required:
+        - mode
+      properties:
+        mode:
+          type: string
+          enum:
+            - none
+            - manual
+            - approximate
+        manualDescription:
+          type: string
+          maxLength: 500
+        approximate:
+          $ref: "#/components/schemas/ApproximateLocation"
+    ApproximateLocation:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        accuracyMeters:
+          type: number
+          format: double
+    ConsentInput:
+      type: object
+      required:
+        - location
+        - followUp
+      properties:
+        location:
+          type: boolean
+        followUp:
+          type: boolean
+    RelayResponse:
+      type: object
+      required:
+        - relayId
+        - status
+        - category
+        - urgency
+        - anonymizedSummary
+        - safetyNotes
+        - recommendedRoute
+        - locationConfidence
+      properties:
+        relayId:
+          type: string
+          example: relay_local_001
+        status:
+          type: string
+          enum:
+            - accepted
+            - needs_review
+        category:
+          $ref: "#/components/schemas/RelayCategory"
+        urgency:
+          $ref: "#/components/schemas/Urgency"
+        anonymizedSummary:
+          type: string
+        safetyNotes:
+          type: array
+          items:
+            type: string
+        recommendedRoute:
+          type: string
+          example: community_mediator_review
+        locationConfidence:
+          type: string
+          enum:
+            - none
+            - low
+            - medium
+            - high
+    RelayCategory:
+      type: string
+      enum:
+        - unsure
+        - conflict_risk
+        - civic_accountability
+        - public_service
+        - aid_diversion
+        - displacement
+        - gbv_referral
+        - resource_protection
+        - other
+    Urgency:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - immediate
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+        field:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

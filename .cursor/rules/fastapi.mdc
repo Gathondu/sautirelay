@@ -1,0 +1,22 @@
+---
+description: Cursor adapter for SautiRelay FastAPI and API contract rules.
+globs: backend/**/*.py,backend/app/openapi.yaml
+alwaysApply: true
+---
+
+# FastAPI Rule Adapter
+
+Read these canonical docs before editing FastAPI routes, schemas, or the OpenAPI contract:
+
+- `docs/engineering/backend-python.md`
+- `docs/engineering/api-conventions.md`
+- `docs/engineering/testing.md`
+- `docs/engineering/security.md`
+
+Project-specific reminders:
+
+- `backend/app/openapi.yaml` is the API contract source of truth.
+- Do not add undocumented endpoints.
+- Use Pydantic schemas.
+- Keep route handlers thin.
+- Regenerate frontend API client code after contract changes.

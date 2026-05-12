@@ -1,0 +1,19 @@
+---
+description: Cursor adapter for SautiRelay uv workflow rules.
+globs: backend/**/*,backend/pyproject.toml,uv.lock
+alwaysApply: true
+---
+
+# uv Rule Adapter
+
+Read these canonical docs before changing backend dependencies or execution commands:
+
+- `docs/engineering/backend-python.md`
+- `docs/engineering/testing.md`
+
+Project-specific reminders:
+
+- Use `uv`.
+- Do not use `pip` for the project workflow.
+- Use `uv add`, `uv lock`, `uv sync`, and `uv run`.
+- Commit `uv.lock` once it exists.

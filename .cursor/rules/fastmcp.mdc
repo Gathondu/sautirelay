@@ -1,0 +1,22 @@
+---
+description: Cursor adapter for future SautiRelay FastMCP rules.
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# FastMCP Rule Adapter
+
+FastMCP is not part of the current project scope. Apply this adapter only if MCP tooling is explicitly introduced.
+
+Read these canonical docs first:
+
+- `docs/engineering/ai-development.md`
+- `docs/engineering/backend-python.md`
+- `docs/engineering/security.md`
+
+Project-specific reminders:
+
+- Never trust LLM outputs.
+- Validate tool inputs and outputs with schemas.
+- Avoid side effects unless explicitly requested and scoped.
+- Do not create skills yet.
