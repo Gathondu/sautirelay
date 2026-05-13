@@ -43,11 +43,11 @@ def _loc(*, area: str, country: str = "Kenya", admin1: str = "Machakos") -> Appr
     )
 
 
-def _emb(text: str) -> list[float]:
-    return deterministic_embedding(text, dimensions=96)
+def _emb(text: str, *, dimensions: int) -> list[float]:
+    return deterministic_embedding(text, dimensions=dimensions)
 
 
-async def seed_demo_data(repository: SautiRelayRepository) -> None:
+async def seed_demo_data(repository: SautiRelayRepository, *, embedding_dimensions: int = 96) -> None:
     now = utc_now()
     base = now - timedelta(days=1)
 
@@ -115,7 +115,7 @@ async def seed_demo_data(repository: SautiRelayRepository) -> None:
             confidence_score=0.78,
             status=ReportStatus.pending_review,
             cluster_id="demo_cluster_water_syokimau",
-            embedding=_emb("water borehole syokimau market tension"),
+            embedding=_emb("water borehole syokimau market tension", dimensions=embedding_dimensions),
             needs_human_review=True,
             ai_recommended_mediator_action=(
                 "Facilitate calm dialogue between herders and residents; avoid public blame."
@@ -143,7 +143,7 @@ async def seed_demo_data(repository: SautiRelayRepository) -> None:
             confidence_score=0.74,
             status=ReportStatus.pending_review,
             cluster_id="demo_cluster_water_syokimau",
-            embedding=_emb("water borehole syokimau youth gathering evening"),
+            embedding=_emb("water borehole syokimau youth gathering evening", dimensions=embedding_dimensions),
             needs_human_review=True,
             ai_recommended_mediator_action="Offer neutral venue for community leaders to compare accounts.",
             ai_safety_warnings=["Do not disclose reporter details."],
@@ -169,7 +169,7 @@ async def seed_demo_data(repository: SautiRelayRepository) -> None:
             confidence_score=0.81,
             status=ReportStatus.verified,
             cluster_id="demo_cluster_land_verified",
-            embedding=_emb("land boundary dispute school plot athi river"),
+            embedding=_emb("land boundary dispute school plot athi river", dimensions=embedding_dimensions),
             needs_human_review=False,
             ai_recommended_mediator_action="Map dispute with local elders; document agreed boundaries.",
             ai_safety_warnings=["Do not disclose reporter details."],
@@ -193,7 +193,7 @@ async def seed_demo_data(repository: SautiRelayRepository) -> None:
             confidence_score=0.66,
             status=ReportStatus.resolved,
             cluster_id="demo_cluster_election_archived",
-            embedding=_emb("election intimidation polling station nairobi"),
+            embedding=_emb("election intimidation polling station nairobi", dimensions=embedding_dimensions),
             needs_human_review=False,
             ai_recommended_mediator_action="Document with electoral board liaison if recurrence is reported.",
             ai_safety_warnings=["Do not disclose reporter details."],
@@ -217,7 +217,7 @@ async def seed_demo_data(repository: SautiRelayRepository) -> None:
             confidence_score=0.69,
             status=ReportStatus.needs_more_info,
             cluster_id=None,
-            embedding=_emb("protection patrols women transit site upper nile"),
+            embedding=_emb("protection patrols women transit site upper nile", dimensions=embedding_dimensions),
             needs_human_review=True,
             ai_recommended_mediator_action="Do not escalate until a protection-safe verification path is confirmed.",
             ai_safety_warnings=[
@@ -244,7 +244,7 @@ async def seed_demo_data(repository: SautiRelayRepository) -> None:
             confidence_score=0.41,
             status=ReportStatus.unverified_rumor,
             cluster_id=None,
-            embedding=_emb("online rumor armed group town garissa"),
+            embedding=_emb("online rumor armed group town garissa", dimensions=embedding_dimensions),
             needs_human_review=False,
             ai_recommended_mediator_action="No mediator action unless corroborated by trusted local sources.",
             ai_safety_warnings=["Avoid amplifying unverified armed-group claims."],
@@ -371,7 +371,7 @@ async def run_demo_seed(
     workflow: WorkflowService,
     settings: Settings,
 ) -> None:
-    await seed_demo_data(repository)
+    await seed_demo_data(repository, embedding_dimensions=settings.embedding_dimensions or 96)
     if not settings.demo_seed_with_ai or not settings.openai_api_key:
         return
     verifier = AuthenticatedUser(

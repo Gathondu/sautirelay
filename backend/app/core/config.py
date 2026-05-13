@@ -97,7 +97,10 @@ def _json_object_env(name: str) -> dict[str, object]:
     if value is None:
         return {}
 
-    parsed = json.loads(value)
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{name} must be a valid JSON object.") from exc
     if not isinstance(parsed, dict):
         raise ValueError(f"{name} must be a JSON object.")
     return parsed

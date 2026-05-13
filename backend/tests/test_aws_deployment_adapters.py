@@ -13,6 +13,8 @@ from backend.app.core.models import (
     Urgency,
 )
 from backend.app.repositories.dynamodb import DynamoDbSautiRelayRepository
+from backend.app.repositories.memory import InMemorySautiRelayRepository
+from backend.app.services.demo_seed import seed_demo_data
 from backend.app.services.s3_vectors import S3VectorStore, validate_s3_vectors_region
 
 
@@ -134,6 +136,17 @@ def test_runtime_region_uses_non_reserved_lambda_env_key(monkeypatch: pytest.Mon
     settings = get_settings()
 
     assert settings.aws_region == "af-south-1"
+
+
+def test_demo_seed_embeddings_match_configured_vector_dimensions() -> None:
+    repository = InMemorySautiRelayRepository()
+
+    _run(seed_demo_data(repository, embedding_dimensions=1536))
+    reports = _run(repository.list_reports())
+
+    seeded_embeddings = [report.embedding for report in reports if report.embedding is not None]
+    assert seeded_embeddings
+    assert {len(embedding) for embedding in seeded_embeddings} == {1536}
 
 
 def test_lambda_handler_is_callable() -> None:
