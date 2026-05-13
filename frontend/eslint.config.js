@@ -10,6 +10,7 @@ import svelteConfig from './svelte.config.js';
 export default defineConfig(
   {
     ignores: [
+      'build/**',
       '.svelte-kit/**',
       'dist/**',
       'node_modules/**',

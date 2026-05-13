@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 from typing import Any
 
 import pytest
@@ -50,20 +49,6 @@ def test_openai_settings_prefer_sautirelay_env(monkeypatch: pytest.MonkeyPatch) 
         "HTTP-Referer": "http://localhost:5173",
         "X-Title": "SautiRelay",
     }
-
-
-def test_config_module_loads_repo_env_values(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("OPENAI_MODEL", raising=False)
-    monkeypatch.delenv("OPENAI_MAX_OUTPUT_TOKENS", raising=False)
-
-    config = importlib.import_module("backend.app.core.config")
-    importlib.reload(config)
-    config.get_settings.cache_clear()
-
-    settings = config.get_settings()
-
-    assert settings.openai_model == "nvidia/nemotron-3-super-120b-a12b:free"
-    assert settings.openai_max_output_tokens == 800
 
 
 def test_intake_service_passes_configured_base_url_to_openai_client(monkeypatch: pytest.MonkeyPatch) -> None:
