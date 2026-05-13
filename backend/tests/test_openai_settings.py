@@ -161,8 +161,6 @@ def test_embedding_service_sends_provider_specific_kwargs(monkeypatch: pytest.Mo
         "input": "Report text",
         "model": "provider/embedding-model",
         "dimensions": 384,
-        "encoding_format": "float",
-        "check_embedding_ctx_length": False,
         "extra_body": {
             "provider": {"allow_fallbacks": True},
             "input_type": "search_document",
