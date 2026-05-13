@@ -16,7 +16,15 @@ export type ReportCategory =
   | 'OTHER'
   | 'NOT_SURE';
 
-export type Urgency = 'UNKNOWN' | 'NOT_SURE' | 'ROUTINE' | 'NOW' | 'TODAY' | 'THIS_WEEK' | 'WITHIN_24_HOURS';
+export type Urgency =
+  | 'UNKNOWN'
+  | 'NOT_SURE'
+  | 'ROUTINE'
+  | 'NOW'
+  | 'TODAY'
+  | 'THIS_WEEK'
+  | 'WITHIN_24_HOURS'
+  | 'IMMEDIATE';
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type ReportCreateRequest = {
@@ -94,6 +102,39 @@ export type ClusterItem = {
   status: string;
 };
 
+export type AuditEvent = {
+  auditId: string;
+  actorId?: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type ReportDetail = ReportItem & {
+  channel: string;
+  language: string;
+  location?: {
+    internalArea?: string;
+    mediatorArea?: string;
+    analyticsArea?: string;
+    publicArea?: string;
+    precision?: string;
+  };
+  aiSummary?: string;
+  safetyWarnings: string[];
+  relatedReportIds?: string[];
+  auditEvents: AuditEvent[];
+};
+
+export type ClusterDetail = ClusterItem & {
+  reportIds: string[];
+  recommendedMediatorAction: string;
+  safetyWarnings: string[];
+  auditEvents: AuditEvent[];
+};
+
 export type EscalationItem = {
   escalationId?: string;
   id?: string;
@@ -103,6 +144,29 @@ export type EscalationItem = {
   action_brief?: string;
   urgency: Urgency;
   status: string;
+};
+
+export type VerificationDecision =
+  | 'VERIFIED'
+  | 'NEEDS_MORE_INFO'
+  | 'DUPLICATE'
+  | 'UNVERIFIED_RUMOR'
+  | 'DISMISSED'
+  | 'ESCALATE_IMMEDIATELY'
+  | 'ARCHIVED';
+
+export type VerificationRequest = {
+  decision: VerificationDecision;
+  notes: string;
+  confidence: number;
+};
+
+export type EscalationCreateRequest = {
+  mediatorId: string;
+  actionBrief: string;
+  safetyNote: string;
+  urgency: Urgency;
+  followUpDueAt: string;
 };
 
 export type DashboardMetrics = {
@@ -168,6 +232,46 @@ export function listClusters(token: string): Promise<{ items: ClusterItem[]; tot
     headers: {
       authorization: `Bearer ${token}`,
     },
+  });
+}
+
+export function getReport(token: string, reportId: string): Promise<ReportDetail> {
+  return request<ReportDetail>(`/reports/${encodeURIComponent(reportId)}`, {
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function getCluster(token: string, clusterId: string): Promise<ClusterDetail> {
+  return request<ClusterDetail>(`/clusters/${encodeURIComponent(clusterId)}`, {
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function verifyCluster(token: string, clusterId: string, payload: VerificationRequest): Promise<unknown> {
+  return request<unknown>(`/clusters/${encodeURIComponent(clusterId)}/verify`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function escalateCluster(
+  token: string,
+  clusterId: string,
+  payload: EscalationCreateRequest,
+): Promise<EscalationItem> {
+  return request<EscalationItem>(`/clusters/${encodeURIComponent(clusterId)}/escalate`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
   });
 }
 

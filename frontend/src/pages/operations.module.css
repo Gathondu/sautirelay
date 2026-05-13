@@ -68,6 +68,18 @@
   opacity: 0.55;
 }
 
+.buttonSecondary {
+  min-height: 2.75rem;
+  border: 1px solid rgba(23, 49, 45, 0.35);
+  border-radius: 8px;
+  padding: 0 1rem;
+  background: #fffdf9;
+  color: #17312d;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
@@ -109,4 +121,69 @@
   padding: 0.8rem;
   background: #fff0ee;
   color: #9d2f1f;
+}
+
+.success {
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #e9f7ef;
+  color: #1f633d;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(8, 20, 18, 0.56);
+}
+
+.modalCard {
+  width: min(100%, 44rem);
+  max-height: min(90vh, 60rem);
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(23, 49, 45, 0.16);
+  padding: 1rem;
+  background: #fffdf9;
+  box-shadow: 0 20px 54px rgba(8, 20, 18, 0.32);
+}
+
+.modalHeader {
+  margin-bottom: 0.75rem;
+}
+
+.modalHeader h2 {
+  margin: 0;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0;
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  border: 1px solid rgba(23, 49, 45, 0.24);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+  color: #17312d;
+  font: inherit;
+}
+
+.field textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
