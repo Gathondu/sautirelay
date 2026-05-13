@@ -25,17 +25,26 @@ MEDIATOR_CREDENTIALS = {
 
 
 @pytest.fixture(autouse=True)
-def deterministic_local_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def deterministic_local_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("SAUTIRELAY_ENV", "test")
     monkeypatch.setenv("SAUTIRELAY_JWT_SECRET", "test-only-secret")
     monkeypatch.setenv("SAUTIRELAY_OPENAI_MODEL", "test-model")
     monkeypatch.setenv("SAUTIRELAY_EMBEDDING_MODEL", "test-embedding-model")
+    monkeypatch.setenv(
+        "SAUTIRELAY_CORS_ALLOW_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    from backend.app.core.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture()
 def client() -> Iterator[TestClient]:
-    module = importlib.import_module("backend.main")
+    module = importlib.import_module("backend.app.main")
     module = importlib.reload(module)
     app = getattr(module, "app")
 

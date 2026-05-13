@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.core.config import get_settings
 from backend.app.repositories.memory import InMemorySautiRelayRepository
@@ -21,11 +22,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
     app = FastAPI(
         title="SautiRelay API",
         version="0.1.0",
         description="API for anonymous SautiRelay signal reporting and mediator escalation.",
         lifespan=lifespan,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_allow_origins),
+        allow_credentials=settings.cors_allow_credentials,
+        allow_methods=list(settings.cors_allow_methods),
+        allow_headers=list(settings.cors_allow_headers),
     )
     app.include_router(status.router)
     app.include_router(auth.router)
