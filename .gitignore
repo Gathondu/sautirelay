@@ -3,6 +3,8 @@ frontend/node_modules/
 frontend/.svelte-kit/
 frontend/dist/
 frontend/.vite/
+frontend/playwright-report/
+frontend/test-results/
 pnpm-debug.log*
 
 # Python / backend

@@ -1,22 +1,35 @@
 <script lang="ts">
-  import { primaryRoutes, routeHref } from '../../lib/router/routes';
+  import { page } from '$app/state';
   import styles from './AppLayout.module.css';
-  import type { AppRoute } from '../../lib/router/routes';
   import type { Snippet } from 'svelte';
 
-  let { currentRoute, children }: { currentRoute: AppRoute; children: Snippet } = $props();
+  let { children }: { children: Snippet } = $props();
+
+  const primaryRoutes = [
+    { label: 'Report', href: '/' },
+    { label: 'Check status', href: '/status' },
+    { label: 'Verifier', href: '/verifier' },
+    { label: 'Mediator', href: '/mediator' },
+    { label: 'Analytics', href: '/analytics' },
+    { label: 'Docs', href: '/docs' },
+  ];
+
+  function isActive(href: string): boolean {
+    if (href === '/') return page.url.pathname === '/';
+    return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
+  }
 </script>
 
 <div class={styles.appShell}>
   <header class={styles.topbar}>
-    <a class={styles.brand} href={routeHref({ name: 'docs' })}>SautiRelay</a>
+    <a class={styles.brand} href="/">SautiRelay</a>
 
     <nav class={styles.nav} aria-label="Primary navigation">
-      {#each primaryRoutes as route (route.name)}
+      {#each primaryRoutes as route (route.href)}
         <a
-          class={`${styles.navLink} ${currentRoute.name === route.name ? styles.navLinkActive : ''}`}
+          class={`${styles.navLink} ${isActive(route.href) ? styles.navLinkActive : ''}`}
           href={route.href}
-          aria-current={currentRoute.name === route.name ? 'page' : undefined}
+          aria-current={isActive(route.href) ? 'page' : undefined}
         >
           {route.label}
         </a>
