@@ -742,7 +742,9 @@ class WorkflowService:
         report = await self._repository.get_report(report_id)
         if report is None:
             return
-        await self._repository.put_report(report.model_copy(update={"status": ReportStatus.new, "updated_at": utc_now()}))
+        await self._repository.put_report(
+            report.model_copy(update={"status": ReportStatus.new, "updated_at": utc_now()})
+        )
         await self._audit(None, "report.ai_processing_failed", "report", report_id, {"detail": detail[:200]})
 
     async def _handle_background_escalation_failure(self, escalation_id: str, detail: str, actor_id: str) -> None:
@@ -753,7 +755,9 @@ class WorkflowService:
         failed = escalation.model_copy(
             update={
                 "status": EscalationStatus.pending_acceptance,
-                "action_brief": "Mediator brief could not be generated automatically. Please proceed with manual review.",
+                "action_brief": (
+                    "Mediator brief could not be generated automatically. Please proceed with manual review."
+                ),
                 "updated_at": utc_now(),
             }
         )

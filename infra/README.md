@@ -1,23 +1,24 @@
-# Future Infrastructure Notes
+# Infrastructure Notes
 
-This directory is for future SautiRelay infrastructure documentation only.
+This directory contains the first AWS deployment path for SautiRelay.
 
-## Current Boundary
+## AWS Shape
 
-Do not add deployment scripts, Terraform, CloudFormation, CDK, serverless configs, or GitHub deployment workflows yet. The current project phase is local development and testing.
+- Frontend: static SvelteKit build in a private S3 bucket, served through CloudFront with Origin Access Control.
+- Backend: FastAPI packaged as an AWS Lambda container image in ECR, exposed through API Gateway HTTP API.
+- Persistence: DynamoDB single-table storage for application documents.
+- Embeddings: S3 Vectors vector bucket and index.
+- Deploy runner: GitHub Actions, authenticated with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets.
 
-## Planned AWS Shape
+## Configuration
 
-- Frontend: S3 + CloudFront.
-- Backend: Lambda + API Gateway.
-- Persistence: managed database or object storage after the local report model is validated.
-- Async routing: queue or notification service for responder handoff.
-- Secrets: managed secret storage, not committed environment files.
+Keep the root `.env` file local and uncommitted. Configure non-secret deployment values as GitHub repository Variables. The workflow also reads `infra/deploy.env` if present, so that file can be used for local deployment-only overrides. Keep production secrets in GitHub Secrets:
 
-## Open Questions
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `OPENAI_API_KEY`
+- `JWT_SECRET`
+- `VERIFIER_PASSWORD`
+- `MEDIATOR_PASSWORD`
 
-- Which African regions and responder networks are in the first pilot?
-- What data retention policy applies to report records?
-- What level of location precision is acceptable?
-- Which communication channels should be supported first: web, SMS, USSD, WhatsApp, or mobile app?
-- What human verification process is required before responder escalation?
+Terraform lives in `infra/terraform`. The deployment workflow first creates the ECR repository, then builds and pushes the Lambda image from GitHub Actions, then applies the complete stack.

@@ -7,7 +7,7 @@ The app is planned as a local-first Svelte 5 + FastAPI project. The frontend use
 ## Current Scope
 
 - Build and test locally first.
-- Document future AWS architecture without adding deployment code.
+- Deploy the first AWS path with Terraform and GitHub Actions.
 - Keep the OpenAPI contract as the boundary between frontend and backend.
 - Prioritize anonymous reporting, consent-based location handling, structured report output, and responder routing workflows.
 - Use Svelte 5 strictly for frontend work: runes, CSS Modules, and no Svelte 3/4 syntax.
@@ -59,10 +59,18 @@ docker compose -f docker/docker-compose.yml up
 
 Dockerfiles are still planned, so Compose should be fully validated after the Docker phase in `PLAN.md` is implemented.
 
+## AWS Deployment
+
+The first deployment path is managed by Terraform and a manual GitHub Actions workflow:
+
+- Frontend: static SvelteKit build in S3 behind CloudFront.
+- Backend: FastAPI in an AWS Lambda container image from ECR, using `Mangum` as the Lambda handler adapter.
+- Data: DynamoDB for application documents and S3 Vectors for report embeddings.
+
+Keep the root `.env` file local and uncommitted. Configure non-secret deploy values as GitHub repository Variables, or use `infra/deploy.env` locally as an optional override. Configure production secrets in GitHub Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `OPENAI_API_KEY`, `JWT_SECRET`, `VERIFIER_PASSWORD`, and `MEDIATOR_PASSWORD`.
+
 ## Planned Next Steps
 
-- Implement FastAPI app structure under `backend/app/`.
-- Generate the frontend TypeScript API client from `backend/app/openapi.yaml`.
-- Build the Svelte report submission flow.
-- Add frontend and backend tests.
-- Add Dockerfiles and correct Compose build contexts.
+- Validate the first AWS deployment from `.github/workflows/deploy-aws.yml`.
+- Add durable async processing with SQS/EventBridge if Lambda background processing becomes unreliable.
+- Add custom domain and ACM certificate once the CloudFront URL is verified.

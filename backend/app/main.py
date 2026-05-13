@@ -2,10 +2,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from backend.app.core.config import get_settings
+from backend.app.repositories.dynamodb import DynamoDbSautiRelayRepository
 from backend.app.repositories.memory import InMemorySautiRelayRepository, LocalJsonSautiRelayRepository
 from backend.app.routers import auth, clusters, dashboard, escalations, reports, status
 from backend.app.services.auth import AuthService
 from backend.app.services.demo_seed import run_demo_seed
+from backend.app.services.s3_vectors import S3VectorStore, validate_s3_vectors_region
 from backend.app.services.workflow import WorkflowService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +16,24 @@ from fastapi.middleware.cors import CORSMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    if settings.environment == "test":
+    if settings.repository_backend == "dynamodb":
+        if not settings.dynamodb_table_name:
+            raise RuntimeError("DYNAMODB_TABLE_NAME is required when REPOSITORY_BACKEND=dynamodb.")
+        if not settings.s3_vector_bucket_name or not settings.s3_vector_index_name:
+            raise RuntimeError(
+                "S3_VECTOR_BUCKET_NAME and S3_VECTOR_INDEX_NAME are required when REPOSITORY_BACKEND=dynamodb."
+            )
+        validate_s3_vectors_region(settings.aws_region)
+        repository = DynamoDbSautiRelayRepository(
+            table_name=settings.dynamodb_table_name,
+            region_name=settings.aws_region,
+            vector_store=S3VectorStore(
+                vector_bucket_name=settings.s3_vector_bucket_name,
+                index_name=settings.s3_vector_index_name,
+                region_name=settings.aws_region,
+            ),
+        )
+    elif settings.environment == "test":
         repository = InMemorySautiRelayRepository()
     else:
         repository = LocalJsonSautiRelayRepository(settings.local_data_dir)

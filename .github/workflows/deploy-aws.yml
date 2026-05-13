@@ -1,0 +1,284 @@
+name: Deploy AWS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      TERRAFORM_DIR: infra/terraform
+      PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+      ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+      FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+      LAMBDA_FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME }}
+      DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME }}
+      S3_VECTOR_BUCKET_NAME: ${{ vars.S3_VECTOR_BUCKET_NAME }}
+      S3_VECTOR_INDEX_NAME: ${{ vars.S3_VECTOR_INDEX_NAME }}
+      OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+      OPENAI_MAX_OUTPUT_TOKENS: ${{ vars.OPENAI_MAX_OUTPUT_TOKENS }}
+      EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+      EMBEDDING_DIMENSIONS: ${{ vars.EMBEDDING_DIMENSIONS }}
+      EMBEDDING_INPUT_TYPE: ${{ vars.EMBEDDING_INPUT_TYPE }}
+      EMBEDDING_EXTRA_BODY: ${{ vars.EMBEDDING_EXTRA_BODY }}
+      EMBEDDING_EXTRA_HEADERS: ${{ vars.EMBEDDING_EXTRA_HEADERS }}
+      CORS_ALLOW_CREDENTIALS: ${{ vars.CORS_ALLOW_CREDENTIALS }}
+      CORS_ALLOW_METHODS: ${{ vars.CORS_ALLOW_METHODS }}
+      CORS_ALLOW_HEADERS: ${{ vars.CORS_ALLOW_HEADERS }}
+      DEMO_SEED_ENABLED: ${{ vars.DEMO_SEED_ENABLED }}
+      DEMO_SEED_WITH_AI: ${{ vars.DEMO_SEED_WITH_AI }}
+      AI_ALLOW_DETERMINISTIC_FALLBACK: ${{ vars.AI_ALLOW_DETERMINISTIC_FALLBACK }}
+      VERIFIER_USERNAME: ${{ vars.VERIFIER_USERNAME }}
+      MEDIATOR_USERNAME: ${{ vars.MEDIATOR_USERNAME }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load deployment env files
+        shell: bash
+        run: |
+          set -euo pipefail
+          load_env_file() {
+            local env_file="$1"
+            if [ ! -f "$env_file" ]; then
+              return
+            fi
+            while IFS='=' read -r key value || [ -n "$key" ]; do
+              key="$(echo "$key" | xargs)"
+              value="$(echo "${value:-}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+              if [ -z "$key" ] || [[ "$key" == \#* ]]; then
+                continue
+              fi
+              echo "$key=$value" >> "$GITHUB_ENV"
+            done < "$env_file"
+          }
+          load_env_file ".env"
+          load_env_file "infra/deploy.env"
+
+      - name: Export Terraform variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "TF_VAR_project_name=${PROJECT_NAME:-sautirelay}"
+            echo "TF_VAR_environment=${ENVIRONMENT:-prod}"
+            echo "TF_VAR_aws_region=${AWS_REGION:-af-south-1}"
+            echo "TF_VAR_frontend_bucket_name=${FRONTEND_BUCKET_NAME:-${FRONTEND_BUCKET:-}}"
+            echo "TF_VAR_lambda_function_name=${LAMBDA_FUNCTION_NAME:-}"
+            echo "TF_VAR_dynamodb_table_name=${DYNAMODB_TABLE_NAME:-}"
+            echo "TF_VAR_s3_vector_bucket_name=${S3_VECTOR_BUCKET_NAME:-}"
+            echo "TF_VAR_s3_vector_index_name=${S3_VECTOR_INDEX_NAME:-report-embeddings}"
+            echo "TF_VAR_embedding_dimensions=${EMBEDDING_DIMENSIONS:-1536}"
+            echo "TF_VAR_openai_model=${OPENAI_MODEL:-gpt-5.5}"
+            echo "TF_VAR_openai_base_url=${OPENAI_BASE_URL:-}"
+            echo "TF_VAR_openai_max_output_tokens=${OPENAI_MAX_OUTPUT_TOKENS:-1200}"
+            echo "TF_VAR_embedding_model=${EMBEDDING_MODEL:-text-embedding-3-small}"
+            echo "TF_VAR_embedding_input_type=${EMBEDDING_INPUT_TYPE:-}"
+            echo "TF_VAR_embedding_extra_body=${EMBEDDING_EXTRA_BODY:-{}}"
+            echo "TF_VAR_embedding_extra_headers=${EMBEDDING_EXTRA_HEADERS:-{}}"
+            echo "TF_VAR_cors_allow_credentials=${CORS_ALLOW_CREDENTIALS:-false}"
+            echo "TF_VAR_cors_allow_methods=${CORS_ALLOW_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}"
+            echo "TF_VAR_cors_allow_headers=${CORS_ALLOW_HEADERS:-Authorization,Content-Type}"
+            echo "TF_VAR_demo_seed_enabled=${DEMO_SEED_ENABLED:-false}"
+            echo "TF_VAR_demo_seed_with_ai=${DEMO_SEED_WITH_AI:-false}"
+            echo "TF_VAR_ai_allow_deterministic_fallback=${AI_ALLOW_DETERMINISTIC_FALLBACK:-false}"
+            echo "TF_VAR_verifier_username=${VERIFIER_USERNAME:-verifier@sautirelay.dev}"
+            echo "TF_VAR_mediator_username=${MEDIATOR_USERNAME:-mediator@sautirelay.dev}"
+            echo "TF_VAR_backend_image_uri=bootstrap"
+            echo "TF_VAR_cors_allow_origins=*"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Validate backend
+        working-directory: backend
+        run: |
+          uv sync --dev
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Validate frontend
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm validate
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform init
+
+      - name: Terraform format and validate
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: |
+          terraform fmt -check
+          terraform validate
+
+      - name: Bootstrap ECR
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform apply -target=aws_ecr_repository.backend -auto-approve
+
+      - name: Build and push backend image
+        shell: bash
+        run: |
+          set -euo pipefail
+          ECR_REPOSITORY_NAME="${PROJECT_NAME:-sautirelay}-${ENVIRONMENT:-prod}-backend"
+          ECR_REPOSITORY_URL="$(aws ecr describe-repositories \
+            --repository-names "$ECR_REPOSITORY_NAME" \
+            --query 'repositories[0].repositoryUri' \
+            --output text)"
+          IMAGE_URI="${ECR_REPOSITORY_URL}:${GITHUB_SHA}"
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPOSITORY_URL"
+          docker build -f backend/Dockerfile.lambda -t "$IMAGE_URI" backend
+          docker push "$IMAGE_URI"
+          echo "BACKEND_IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
+          echo "TF_VAR_backend_image_uri=$IMAGE_URI" >> "$GITHUB_ENV"
+
+      - name: Apply Terraform app stack
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform apply -auto-approve
+
+      - name: Update Lambda secrets from GitHub Secrets
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          VERIFIER_PASSWORD: ${{ secrets.VERIFIER_PASSWORD }}
+          MEDIATOR_PASSWORD: ${{ secrets.MEDIATOR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          LAMBDA_NAME="$(terraform output -raw backend_lambda_function_name)"
+          DYNAMODB_TABLE_NAME="$(terraform output -raw dynamodb_table_name)"
+          S3_VECTOR_BUCKET_NAME="$(terraform output -raw s3_vector_bucket_name)"
+          S3_VECTOR_INDEX_NAME="$(terraform output -raw s3_vector_index_name)"
+          CLOUDFRONT_DOMAIN_NAME="$(terraform output -raw cloudfront_domain_name)"
+          CORS_ORIGIN="https://${CLOUDFRONT_DOMAIN_NAME}"
+          ENVIRONMENT_JSON="$(jq -n \
+            --arg env "${ENVIRONMENT:-prod}" \
+            --arg region "${AWS_REGION:-af-south-1}" \
+            --arg table "$DYNAMODB_TABLE_NAME" \
+            --arg vector_bucket "$S3_VECTOR_BUCKET_NAME" \
+            --arg vector_index "$S3_VECTOR_INDEX_NAME" \
+            --arg openai_model "${OPENAI_MODEL:-gpt-5.5}" \
+            --arg openai_base_url "${OPENAI_BASE_URL:-}" \
+            --arg openai_max_output_tokens "${OPENAI_MAX_OUTPUT_TOKENS:-1200}" \
+            --arg embedding_model "${EMBEDDING_MODEL:-text-embedding-3-small}" \
+            --arg embedding_dimensions "${EMBEDDING_DIMENSIONS:-1536}" \
+            --arg embedding_input_type "${EMBEDDING_INPUT_TYPE:-}" \
+            --arg embedding_extra_body "${EMBEDDING_EXTRA_BODY:-{}}" \
+            --arg embedding_extra_headers "${EMBEDDING_EXTRA_HEADERS:-{}}" \
+            --arg cors_allow_credentials "${CORS_ALLOW_CREDENTIALS:-false}" \
+            --arg cors_allow_methods "${CORS_ALLOW_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}" \
+            --arg cors_allow_headers "${CORS_ALLOW_HEADERS:-Authorization,Content-Type}" \
+            --arg demo_seed_enabled "${DEMO_SEED_ENABLED:-false}" \
+            --arg demo_seed_with_ai "${DEMO_SEED_WITH_AI:-false}" \
+            --arg ai_allow_deterministic_fallback "${AI_ALLOW_DETERMINISTIC_FALLBACK:-false}" \
+            --arg verifier_username "${VERIFIER_USERNAME:-verifier@sautirelay.dev}" \
+            --arg mediator_username "${MEDIATOR_USERNAME:-mediator@sautirelay.dev}" \
+            --arg cors_origin "$CORS_ORIGIN" \
+            --arg openai_api_key "$OPENAI_API_KEY" \
+            --arg jwt_secret "$JWT_SECRET" \
+            --arg verifier_password "$VERIFIER_PASSWORD" \
+            --arg mediator_password "$MEDIATOR_PASSWORD" \
+            '{Variables:{
+              ENV:$env,
+              AWS_REGION:$region,
+              REPOSITORY_BACKEND:"dynamodb",
+              DYNAMODB_TABLE_NAME:$table,
+              S3_VECTOR_BUCKET_NAME:$vector_bucket,
+              S3_VECTOR_INDEX_NAME:$vector_index,
+              OPENAI_MODEL:$openai_model,
+              OPENAI_BASE_URL:$openai_base_url,
+              OPENAI_MAX_OUTPUT_TOKENS:$openai_max_output_tokens,
+              EMBEDDING_MODEL:$embedding_model,
+              EMBEDDING_DIMENSIONS:$embedding_dimensions,
+              EMBEDDING_INPUT_TYPE:$embedding_input_type,
+              EMBEDDING_EXTRA_BODY:$embedding_extra_body,
+              EMBEDDING_EXTRA_HEADERS:$embedding_extra_headers,
+              CORS_ALLOW_ORIGINS:$cors_origin,
+              CORS_ALLOW_CREDENTIALS:$cors_allow_credentials,
+              CORS_ALLOW_METHODS:$cors_allow_methods,
+              CORS_ALLOW_HEADERS:$cors_allow_headers,
+              DEMO_SEED_ENABLED:$demo_seed_enabled,
+              DEMO_SEED_WITH_AI:$demo_seed_with_ai,
+              AI_ALLOW_DETERMINISTIC_FALLBACK:$ai_allow_deterministic_fallback,
+              VERIFIER_USERNAME:$verifier_username,
+              MEDIATOR_USERNAME:$mediator_username,
+              OPENAI_API_KEY:$openai_api_key,
+              JWT_SECRET:$jwt_secret,
+              VERIFIER_PASSWORD:$verifier_password,
+              MEDIATOR_PASSWORD:$mediator_password
+            }}')"
+          aws lambda update-function-configuration \
+            --function-name "$LAMBDA_NAME" \
+            --environment "$ENVIRONMENT_JSON"
+          aws lambda wait function-updated --function-name "$LAMBDA_NAME"
+
+      - name: Build frontend for deployed API
+        working-directory: frontend
+        env:
+          PUBLIC_API_URL: ${{ env.API_ENDPOINT }}
+        run: |
+          API_ENDPOINT="$(terraform -chdir=../infra/terraform output -raw api_endpoint)"
+          PUBLIC_API_URL="$API_ENDPOINT" pnpm build
+
+      - name: Upload frontend to S3 and invalidate CloudFront
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: |
+          FRONTEND_BUCKET="$(terraform output -raw frontend_bucket_name)"
+          DISTRIBUTION_ID="$(terraform output -raw cloudfront_distribution_id)"
+          aws s3 sync ../../frontend/build "s3://${FRONTEND_BUCKET}" --delete --cache-control "public,max-age=300"
+          aws s3 cp ../../frontend/build "s3://${FRONTEND_BUCKET}" \
+            --recursive \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "no-cache"
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+
+      - name: Deployment summary
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: |
+          echo "API endpoint: $(terraform output -raw api_endpoint)"
+          echo "Frontend URL: https://$(terraform output -raw cloudfront_domain_name)"

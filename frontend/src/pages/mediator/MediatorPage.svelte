@@ -237,10 +237,22 @@
                 <span class={styles.pill}>{selectedEscalationDetail?.urgency ?? selectedEscalation.urgency}</span>
               </div>
 
-              <h3>{selectedEscalationDetail?.assignedTo ?? selectedEscalation.assignedTo ?? m.mediator_assignment_fallback()}</h3>
-              <p>{detailValue(selectedEscalationDetail?.actionBrief ?? selectedEscalation.actionBrief, m.mediator_action_pending())}</p>
+              <h3>
+                {selectedEscalationDetail?.assignedTo ??
+                  selectedEscalation.assignedTo ??
+                  m.mediator_assignment_fallback()}
+              </h3>
+              <p>
+                {detailValue(
+                  selectedEscalationDetail?.actionBrief ?? selectedEscalation.actionBrief,
+                  m.mediator_action_pending(),
+                )}
+              </p>
               <p class={styles.muted}>
-                {detailValue(selectedEscalationDetail?.safetyNote ?? selectedEscalation.safetyNote, m.mediator_safety_pending())}
+                {detailValue(
+                  selectedEscalationDetail?.safetyNote ?? selectedEscalation.safetyNote,
+                  m.mediator_safety_pending(),
+                )}
               </p>
 
               {#if selectedEscalationDetail?.approximateArea}
@@ -291,7 +303,8 @@
                 <button
                   class={styles.buttonSecondary}
                   type="button"
-                  disabled={isSubmitting || !canAcceptStatus(selectedEscalationDetail?.status ?? selectedEscalation.status)}
+                  disabled={isSubmitting ||
+                    !canAcceptStatus(selectedEscalationDetail?.status ?? selectedEscalation.status)}
                   onclick={acceptAssignment}
                 >
                   {m.mediator_accept()}

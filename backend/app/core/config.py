@@ -39,6 +39,11 @@ class Settings:
     embedding_input_type: str | None
     embedding_extra_body: dict[str, object]
     embedding_extra_headers: dict[str, str]
+    repository_backend: str
+    aws_region: str
+    dynamodb_table_name: str | None
+    s3_vector_bucket_name: str | None
+    s3_vector_index_name: str | None
     cors_allow_origins: tuple[str, ...]
     cors_allow_credentials: bool
     cors_allow_methods: tuple[str, ...]
@@ -121,6 +126,11 @@ def get_settings() -> Settings:
         embedding_input_type=_optional_env("EMBEDDING_INPUT_TYPE"),
         embedding_extra_body=_json_object_env("EMBEDDING_EXTRA_BODY"),
         embedding_extra_headers=_string_json_object_env("EMBEDDING_EXTRA_HEADERS"),
+        repository_backend=os.getenv("REPOSITORY_BACKEND", "local").strip().lower(),
+        aws_region=os.getenv("AWS_REGION", "af-south-1").strip(),
+        dynamodb_table_name=_optional_env("DYNAMODB_TABLE_NAME"),
+        s3_vector_bucket_name=_optional_env("S3_VECTOR_BUCKET_NAME"),
+        s3_vector_index_name=_optional_env("S3_VECTOR_INDEX_NAME"),
         cors_allow_origins=_parse_csv_setting(
             os.getenv("CORS_ALLOW_ORIGINS"),
             DEFAULT_CORS_ALLOW_ORIGINS,

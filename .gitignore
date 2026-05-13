@@ -2,6 +2,7 @@
 frontend/node_modules/
 frontend/.svelte-kit/
 frontend/dist/
+frontend/build/
 frontend/.vite/
 frontend/playwright-report/
 frontend/test-results/
@@ -34,6 +35,8 @@ Thumbs.db
 coverage/
 htmlcov/
 .coverage
+.terraform/
+**/.terraform/
 
 # Logs
 *.log
