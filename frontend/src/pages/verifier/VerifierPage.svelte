@@ -331,173 +331,176 @@
           </h2>
         </header>
 
-        {#if modalLoading}
-          <p class={styles.muted}>Loading detail...</p>
-        {:else}
-          {#if modalError}
-            <p class={styles.error} role="alert">{modalError}</p>
-          {/if}
-
-          {#if selectedType === 'report' && selectedReportDetail}
-            <div class={styles.meta}>
-              <span class={styles.pill}>{selectedReportDetail.status}</span>
-              <span class={styles.pill}>
-                {selectedReportDetail.riskLevel ?? selectedReportDetail.risk_level ?? 'MEDIUM'}
-              </span>
-            </div>
-            <p>{selectedReportDetail.summary ?? selectedReportDetail.aiSummary ?? 'No summary available.'}</p>
-            <h3>Redacted text</h3>
-            <p class={styles.muted}>{selectedReportDetail.redactedText ?? 'No redacted text available.'}</p>
-            <h3>Translated text</h3>
-            <p class={styles.muted}>{selectedReportDetail.translatedText ?? 'No translated text available.'}</p>
-            <p class={styles.muted}>Related reports: {selectedReportDetail.relatedReportIds?.length ?? 0}</p>
-            <h3>Safety warnings</h3>
-            {#if (selectedReportDetail.safetyWarnings ?? []).length > 0}
-              <ul>
-                {#each selectedReportDetail.safetyWarnings ?? [] as warning (warning)}
-                  <li>{warning}</li>
-                {/each}
-              </ul>
-            {:else}
-              <p class={styles.muted}>No safety warnings.</p>
-            {/if}
-            <div class={styles.inlineActions}>
-              <button
-                class={styles.buttonSecondary}
-                type="button"
-                disabled={isSubmittingDecision}
-                onclick={processSelectedReport}
-              >
-                Run AI intake
-              </button>
-              <button
-                class={styles.button}
-                type="button"
-                disabled={isSubmittingDecision}
-                onclick={verifySelectedReport}
-              >
-                Mark verified
-              </button>
-            </div>
-          {/if}
-
-          {#if selectedType === 'report' && !selectedReportDetail && selectedReportPreview}
-            <div class={styles.meta}>
-              <span class={styles.pill}>{selectedReportPreview.status}</span>
-              <span class={styles.pill}
-                >{selectedReportPreview.riskLevel ?? selectedReportPreview.risk_level ?? 'MEDIUM'}</span
-              >
-            </div>
-            <p>{selectedReportPreview.summary ?? 'No detail summary is available yet.'}</p>
-            <p class={styles.muted}>
-              {isAwaitingAi(selectedReportPreview)
-                ? 'This report is awaiting AI response. Please check again shortly.'
-                : 'Detailed report content is not available yet for this item.'}
-            </p>
-            {#if isAwaitingAi(selectedReportPreview)}
-              <button
-                class={styles.button}
-                type="button"
-                disabled={isSubmittingDecision}
-                onclick={processSelectedReport}
-              >
-                Run AI intake
-              </button>
-            {/if}
-          {/if}
-
-          {#if selectedType === 'cluster' && selectedClusterDetail}
-            <div class={styles.meta}>
-              <span class={styles.pill}>{selectedClusterDetail.status}</span>
-              <span class={styles.pill}>
-                {selectedClusterDetail.riskLevel ?? selectedClusterDetail.risk_level ?? 'MEDIUM'}
-              </span>
-            </div>
-            <p>{selectedClusterDetail.summary}</p>
-            <h3>Recommended mediator action</h3>
-            <p class={styles.muted}>
-              {selectedClusterDetail.recommendedMediatorAction ?? 'No mediator action recommendation is available yet.'}
-            </p>
-            <h3>Safety warnings</h3>
-            {#if (selectedClusterDetail.safetyWarnings ?? []).length > 0}
-              <ul>
-                {#each selectedClusterDetail.safetyWarnings ?? [] as warning (warning)}
-                  <li>{warning}</li>
-                {/each}
-              </ul>
-            {:else}
-              <p class={styles.muted}>No safety warnings.</p>
-            {/if}
-            <h3>Reports in cluster ({(selectedClusterDetail.reportIds ?? []).length})</h3>
-            {#if (selectedClusterDetail.reportIds ?? []).length > 0}
-              <ul>
-                {#each selectedClusterDetail.reportIds ?? [] as reportId (reportId)}
-                  <li>{reportId}</li>
-                {/each}
-              </ul>
-            {:else}
-              <p class={styles.muted}>No linked reports.</p>
+        <div class={styles.modalBody}>
+          {#if modalLoading}
+            <p class={styles.muted}>Loading detail...</p>
+          {:else}
+            {#if modalError}
+              <p class={styles.error} role="alert">{modalError}</p>
             {/if}
 
-            <div class={styles.inlineActions}>
-              <button
-                class={styles.buttonSecondary}
-                type="button"
-                disabled={isSubmittingDecision}
-                onclick={verifySelectedCluster}
-              >
-                Mark cluster verified
+            {#if selectedType === 'report' && selectedReportDetail}
+              <div class={styles.meta}>
+                <span class={styles.pill}>{selectedReportDetail.status}</span>
+                <span class={styles.pill}>
+                  {selectedReportDetail.riskLevel ?? selectedReportDetail.risk_level ?? 'MEDIUM'}
+                </span>
+              </div>
+              <p>{selectedReportDetail.summary ?? selectedReportDetail.aiSummary ?? 'No summary available.'}</p>
+              <h3>Redacted text</h3>
+              <p class={styles.muted}>{selectedReportDetail.redactedText ?? 'No redacted text available.'}</p>
+              <h3>Translated text</h3>
+              <p class={styles.muted}>{selectedReportDetail.translatedText ?? 'No translated text available.'}</p>
+              <p class={styles.muted}>Related reports: {selectedReportDetail.relatedReportIds?.length ?? 0}</p>
+              <h3>Safety warnings</h3>
+              {#if (selectedReportDetail.safetyWarnings ?? []).length > 0}
+                <ul>
+                  {#each selectedReportDetail.safetyWarnings ?? [] as warning (warning)}
+                    <li>{warning}</li>
+                  {/each}
+                </ul>
+              {:else}
+                <p class={styles.muted}>No safety warnings.</p>
+              {/if}
+              <div class={styles.inlineActions}>
+                <button
+                  class={styles.buttonSecondary}
+                  type="button"
+                  disabled={isSubmittingDecision}
+                  onclick={processSelectedReport}
+                >
+                  Run AI intake
+                </button>
+                <button
+                  class={styles.button}
+                  type="button"
+                  disabled={isSubmittingDecision}
+                  onclick={verifySelectedReport}
+                >
+                  Mark verified
+                </button>
+              </div>
+            {/if}
+
+            {#if selectedType === 'report' && !selectedReportDetail && selectedReportPreview}
+              <div class={styles.meta}>
+                <span class={styles.pill}>{selectedReportPreview.status}</span>
+                <span class={styles.pill}
+                  >{selectedReportPreview.riskLevel ?? selectedReportPreview.risk_level ?? 'MEDIUM'}</span
+                >
+              </div>
+              <p>{selectedReportPreview.summary ?? 'No detail summary is available yet.'}</p>
+              <p class={styles.muted}>
+                {isAwaitingAi(selectedReportPreview)
+                  ? 'This report is awaiting AI response. Please check again shortly.'
+                  : 'Detailed report content is not available yet for this item.'}
+              </p>
+              {#if isAwaitingAi(selectedReportPreview)}
+                <button
+                  class={styles.button}
+                  type="button"
+                  disabled={isSubmittingDecision}
+                  onclick={processSelectedReport}
+                >
+                  Run AI intake
+                </button>
+              {/if}
+            {/if}
+
+            {#if selectedType === 'cluster' && selectedClusterDetail}
+              <div class={styles.meta}>
+                <span class={styles.pill}>{selectedClusterDetail.status}</span>
+                <span class={styles.pill}>
+                  {selectedClusterDetail.riskLevel ?? selectedClusterDetail.risk_level ?? 'MEDIUM'}
+                </span>
+              </div>
+              <p>{selectedClusterDetail.summary}</p>
+              <h3>Recommended mediator action</h3>
+              <p class={styles.muted}>
+                {selectedClusterDetail.recommendedMediatorAction ??
+                  'No mediator action recommendation is available yet.'}
+              </p>
+              <h3>Safety warnings</h3>
+              {#if (selectedClusterDetail.safetyWarnings ?? []).length > 0}
+                <ul>
+                  {#each selectedClusterDetail.safetyWarnings ?? [] as warning (warning)}
+                    <li>{warning}</li>
+                  {/each}
+                </ul>
+              {:else}
+                <p class={styles.muted}>No safety warnings.</p>
+              {/if}
+              <h3>Reports in cluster ({(selectedClusterDetail.reportIds ?? []).length})</h3>
+              {#if (selectedClusterDetail.reportIds ?? []).length > 0}
+                <ul>
+                  {#each selectedClusterDetail.reportIds ?? [] as reportId (reportId)}
+                    <li>{reportId}</li>
+                  {/each}
+                </ul>
+              {:else}
+                <p class={styles.muted}>No linked reports.</p>
+              {/if}
+
+              <div class={styles.inlineActions}>
+                <button
+                  class={styles.buttonSecondary}
+                  type="button"
+                  disabled={isSubmittingDecision}
+                  onclick={verifySelectedCluster}
+                >
+                  Mark cluster verified
+                </button>
+              </div>
+
+              <h3>Escalate to mediator</h3>
+              <label class={styles.field}>
+                Mediator ID
+                <input bind:value={mediatorId} />
+              </label>
+              <label class={styles.field}>
+                Action brief
+                <textarea bind:value={actionBrief}></textarea>
+              </label>
+              <label class={styles.field}>
+                Safety note
+                <textarea bind:value={safetyNote}></textarea>
+              </label>
+              <label class={styles.field}>
+                Urgency
+                <select bind:value={urgency}>
+                  {#each urgencyOptions as urgencyOption (urgencyOption)}
+                    <option value={urgencyOption}>{urgencyOption}</option>
+                  {/each}
+                </select>
+              </label>
+              <label class={styles.field}>
+                Follow-up due at (ISO datetime)
+                <input bind:value={followUpDueAt} placeholder="2026-05-20T12:00:00Z" />
+              </label>
+              <button class={styles.button} type="button" disabled={isSubmittingEscalation} onclick={submitEscalation}>
+                {isSubmittingEscalation ? 'Submitting...' : 'Escalate to mediator'}
               </button>
-            </div>
+            {/if}
 
-            <h3>Escalate to mediator</h3>
-            <label class={styles.field}>
-              Mediator ID
-              <input bind:value={mediatorId} />
-            </label>
-            <label class={styles.field}>
-              Action brief
-              <textarea bind:value={actionBrief}></textarea>
-            </label>
-            <label class={styles.field}>
-              Safety note
-              <textarea bind:value={safetyNote}></textarea>
-            </label>
-            <label class={styles.field}>
-              Urgency
-              <select bind:value={urgency}>
-                {#each urgencyOptions as urgencyOption (urgencyOption)}
-                  <option value={urgencyOption}>{urgencyOption}</option>
-                {/each}
-              </select>
-            </label>
-            <label class={styles.field}>
-              Follow-up due at (ISO datetime)
-              <input bind:value={followUpDueAt} placeholder="2026-05-20T12:00:00Z" />
-            </label>
-            <button class={styles.button} type="button" disabled={isSubmittingEscalation} onclick={submitEscalation}>
-              {isSubmittingEscalation ? 'Submitting...' : 'Escalate to mediator'}
-            </button>
-          {/if}
+            {#if selectedType === 'cluster' && !selectedClusterDetail && selectedClusterPreview}
+              <div class={styles.meta}>
+                <span class={styles.pill}>{selectedClusterPreview.status}</span>
+                <span class={styles.pill}>
+                  {selectedClusterPreview.riskLevel ?? selectedClusterPreview.risk_level ?? 'MEDIUM'}
+                </span>
+                <span class={styles.pill}
+                  >{selectedClusterPreview.reportCount ?? selectedClusterPreview.report_count ?? 0} reports</span
+                >
+              </div>
+              <p>{selectedClusterPreview.summary}</p>
+              <p class={styles.muted}>Detailed cluster data is not available yet. You can close and retry.</p>
+            {/if}
 
-          {#if selectedType === 'cluster' && !selectedClusterDetail && selectedClusterPreview}
-            <div class={styles.meta}>
-              <span class={styles.pill}>{selectedClusterPreview.status}</span>
-              <span class={styles.pill}>
-                {selectedClusterPreview.riskLevel ?? selectedClusterPreview.risk_level ?? 'MEDIUM'}
-              </span>
-              <span class={styles.pill}
-                >{selectedClusterPreview.reportCount ?? selectedClusterPreview.report_count ?? 0} reports</span
-              >
-            </div>
-            <p>{selectedClusterPreview.summary}</p>
-            <p class={styles.muted}>Detailed cluster data is not available yet. You can close and retry.</p>
+            {#if modalSuccess}
+              <p class={styles.success} role="status">{modalSuccess}</p>
+            {/if}
           {/if}
-
-          {#if modalSuccess}
-            <p class={styles.success} role="status">{modalSuccess}</p>
-          {/if}
-        {/if}
+        </div>
 
         <div class={styles.modalActions}>
           <button class={styles.buttonSecondary} type="button" onclick={closeModal}>Close</button>
