@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
 from openai import OpenAI
 from pydantic import BaseModel, Field
+
+from backend.app.core.config import get_settings
 
 from .clustering import EmbeddingService
 from .privacy import redact_sensitive_info, safe_location_view
@@ -112,13 +113,16 @@ class OpenAIIntakeService:
         *,
         model: str | None = None,
         api_key: str | None = None,
+        base_url: str | None = None,
         client: OpenAI | None = None,
         embedding_service: EmbeddingService | None = None,
     ) -> None:
-        self.model = model or os.getenv("SAUTIRELAY_OPENAI_MODEL", DEFAULT_INTAKE_MODEL)
-        self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
+        settings = get_settings()
+        self.model = model or settings.openai_model or DEFAULT_INTAKE_MODEL
+        self.api_key = api_key if api_key is not None else settings.openai_api_key
+        self.base_url = base_url if base_url is not None else settings.openai_base_url
         self.client = client
-        self.embedding_service = embedding_service or EmbeddingService(api_key=self.api_key)
+        self.embedding_service = embedding_service or EmbeddingService(api_key=self.api_key, base_url=self.base_url)
 
     def process_report(
         self,
@@ -173,7 +177,7 @@ class OpenAIIntakeService:
         category_hint: str | None,
         urgency_hint: str | None,
     ) -> IntakeStructuredOutput:
-        client = self.client or OpenAI(api_key=self.api_key)
+        client = self.client or _create_openai_client(api_key=self.api_key, base_url=self.base_url)
         location_view = safe_location_view(location, visibility="mediator")
         response = client.responses.parse(
             model=self.model,
@@ -212,9 +216,7 @@ class OpenAIIntakeService:
     ) -> MediatorBriefStructuredOutput:
         client = self.client
         if client is None:
-            from openai import OpenAI
-
-            client = OpenAI(api_key=self.api_key)
+            client = _create_openai_client(api_key=self.api_key, base_url=self.base_url)
         response = client.responses.parse(
             model=self.model,
             input=[
@@ -364,6 +366,16 @@ def process_report_intake(**kwargs: Any) -> IntakeResult:
 
 def generate_mediator_brief(**kwargs: Any) -> MediatorBrief:
     return OpenAIIntakeService().generate_mediator_brief(**kwargs)
+
+
+def _create_openai_client(*, api_key: str | None, base_url: str | None) -> OpenAI:
+    if api_key and base_url:
+        return OpenAI(api_key=api_key, base_url=base_url)
+    if api_key:
+        return OpenAI(api_key=api_key)
+    if base_url:
+        return OpenAI(base_url=base_url)
+    return OpenAI()
 
 
 def _extract_parsed_response(response: object) -> object:

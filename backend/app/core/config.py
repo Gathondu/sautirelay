@@ -1,3 +1,4 @@
+import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
@@ -23,6 +24,14 @@ class Settings:
     verifier_password: str
     mediator_username: str
     mediator_password: str
+    openai_api_key: str | None
+    openai_base_url: str | None
+    openai_model: str
+    embedding_model: str
+    embedding_dimensions: int | None
+    embedding_input_type: str | None
+    embedding_extra_body: dict[str, object]
+    embedding_extra_headers: dict[str, str]
     cors_allow_origins: tuple[str, ...]
     cors_allow_credentials: bool
     cors_allow_methods: tuple[str, ...]
@@ -50,6 +59,36 @@ def _parse_bool_setting(raw_value: str | None, default: bool) -> bool:
     raise ValueError(f"Invalid boolean setting value: {raw_value!r}")
 
 
+def _optional_env(*names: str) -> str | None:
+    for name in names:
+        value = os.getenv(name)
+        if value and value.strip():
+            return value.strip()
+    return None
+
+
+def _optional_int_env(name: str) -> int | None:
+    value = _optional_env(name)
+    if value is None:
+        return None
+    return int(value)
+
+
+def _json_object_env(name: str) -> dict[str, object]:
+    value = _optional_env(name)
+    if value is None:
+        return {}
+
+    parsed = json.loads(value)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{name} must be a JSON object.")
+    return parsed
+
+
+def _string_json_object_env(name: str) -> dict[str, str]:
+    return {key: str(value) for key, value in _json_object_env(name).items()}
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings(
@@ -62,6 +101,14 @@ def get_settings() -> Settings:
         verifier_password=os.getenv("SAUTIRELAY_VERIFIER_PASSWORD", "verifier-dev-pass"),
         mediator_username=os.getenv("SAUTIRELAY_MEDIATOR_USERNAME", "mediator@sautirelay.dev"),
         mediator_password=os.getenv("SAUTIRELAY_MEDIATOR_PASSWORD", "mediator-dev-pass"),
+        openai_api_key=_optional_env("SAUTIRELAY_OPENAI_API_KEY", "OPENAI_API_KEY"),
+        openai_base_url=_optional_env("SAUTIRELAY_OPENAI_BASE_URL", "OPENAI_BASE_URL"),
+        openai_model=os.getenv("SAUTIRELAY_OPENAI_MODEL", "gpt-5.5"),
+        embedding_model=os.getenv("SAUTIRELAY_EMBEDDING_MODEL", "text-embedding-3-small"),
+        embedding_dimensions=_optional_int_env("SAUTIRELAY_EMBEDDING_DIMENSIONS"),
+        embedding_input_type=_optional_env("SAUTIRELAY_EMBEDDING_INPUT_TYPE"),
+        embedding_extra_body=_json_object_env("SAUTIRELAY_EMBEDDING_EXTRA_BODY"),
+        embedding_extra_headers=_string_json_object_env("SAUTIRELAY_EMBEDDING_EXTRA_HEADERS"),
         cors_allow_origins=_parse_csv_setting(
             os.getenv("SAUTIRELAY_CORS_ALLOW_ORIGINS"),
             DEFAULT_CORS_ALLOW_ORIGINS,

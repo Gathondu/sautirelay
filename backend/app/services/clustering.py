@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import math
-import os
 import re
 from dataclasses import asdict, dataclass
 from typing import Iterable, Sequence
+
+from backend.app.core.config import get_settings
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_VECTOR_DIMENSIONS = 96
@@ -51,12 +52,22 @@ class EmbeddingService:
         self,
         *,
         model: str | None = None,
-        dimensions: int = DEFAULT_VECTOR_DIMENSIONS,
+        dimensions: int | None = None,
         api_key: str | None = None,
+        base_url: str | None = None,
+        input_type: str | None = None,
+        extra_body: dict[str, object] | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
-        self.model = model or os.getenv("SAUTIRELAY_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
-        self.dimensions = dimensions
-        self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
+        settings = get_settings()
+        self.model = model or settings.embedding_model or DEFAULT_EMBEDDING_MODEL
+        self.dimensions = dimensions if dimensions is not None else settings.embedding_dimensions
+        self.local_dimensions = self.dimensions or DEFAULT_VECTOR_DIMENSIONS
+        self.api_key = api_key if api_key is not None else settings.openai_api_key
+        self.base_url = base_url if base_url is not None else settings.openai_base_url
+        self.input_type = input_type if input_type is not None else settings.embedding_input_type
+        self.extra_body = extra_body if extra_body is not None else settings.embedding_extra_body
+        self.extra_headers = extra_headers if extra_headers is not None else settings.embedding_extra_headers
 
     def embed_text(self, text: str | None) -> list[float]:
         body = (text or "").strip()
@@ -64,16 +75,30 @@ class EmbeddingService:
             try:
                 from openai import OpenAI
 
-                client = OpenAI(api_key=self.api_key)
-                response = client.embeddings.create(
-                    input=body.replace("\n", " "),
-                    model=self.model,
-                    dimensions=self.dimensions,
-                )
+                if self.base_url:
+                    client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+                else:
+                    client = OpenAI(api_key=self.api_key)
+                request_kwargs: dict[str, object] = {
+                    "input": body.replace("\n", " "),
+                    "model": self.model,
+                }
+                if self.dimensions is not None:
+                    request_kwargs["dimensions"] = self.dimensions
+
+                extra_body = dict(self.extra_body)
+                if self.input_type:
+                    extra_body["input_type"] = self.input_type
+                if extra_body:
+                    request_kwargs["extra_body"] = extra_body
+                if self.extra_headers:
+                    request_kwargs["extra_headers"] = self.extra_headers
+
+                response = client.embeddings.create(**request_kwargs)
                 return _normalize(response.data[0].embedding)
             except Exception:
-                return deterministic_embedding(body, dimensions=self.dimensions)
-        return deterministic_embedding(body, dimensions=self.dimensions)
+                return deterministic_embedding(body, dimensions=self.local_dimensions)
+        return deterministic_embedding(body, dimensions=self.local_dimensions)
 
     def embed_many(self, texts: Iterable[str | None]) -> list[list[float]]:
         return [self.embed_text(text) for text in texts]
