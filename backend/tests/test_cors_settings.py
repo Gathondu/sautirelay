@@ -55,3 +55,20 @@ def test_cors_preflight_rejects_unconfigured_origin(monkeypatch: pytest.MonkeyPa
         )
 
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_blank_boolean_env_values_fall_back_to_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CORS_ALLOW_CREDENTIALS", "")
+    monkeypatch.setenv("DEMO_SEED_ENABLED", "")
+    monkeypatch.setenv("DEMO_SEED_WITH_AI", "")
+    monkeypatch.setenv("AI_ALLOW_DETERMINISTIC_FALLBACK", "")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+
+    assert settings.cors_allow_credentials is False
+    assert settings.demo_seed_enabled is False
+    assert settings.demo_seed_with_ai is False
+    assert settings.ai_allow_deterministic_fallback is False

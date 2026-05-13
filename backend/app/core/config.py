@@ -67,6 +67,8 @@ def _parse_bool_setting(raw_value: str | None, default: bool) -> bool:
         return default
 
     normalized_value = raw_value.strip().lower()
+    if not normalized_value:
+        return default
     if normalized_value in {"1", "true", "yes", "on"}:
         return True
     if normalized_value in {"0", "false", "no", "off"}:
