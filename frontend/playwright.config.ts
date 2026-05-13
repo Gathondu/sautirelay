@@ -27,7 +27,7 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
       env: {
-        SAUTIRELAY_CORS_ALLOW_ORIGINS: frontendOrigins,
+        CORS_ALLOW_ORIGINS: frontendOrigins,
       },
     },
     {
@@ -36,7 +36,7 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
       env: {
-        PUBLIC_SAUTIRELAY_API_URL: `http://127.0.0.1:${backendPort}`,
+        PUBLIC_API_URL: `http://127.0.0.1:${backendPort}`,
       },
     },
   ],

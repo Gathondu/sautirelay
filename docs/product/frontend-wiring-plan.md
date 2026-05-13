@@ -12,7 +12,7 @@
 - Keep Svelte 5 runes and event attributes.
 - Use CSS Modules for page and layout styles. Do not introduce Tailwind.
 - Keep the frontend as a separate client for the FastAPI backend; do not add SvelteKit server API routes for product workflow calls unless a later security requirement needs a proxy.
-- Use `PUBLIC_SAUTIRELAY_API_URL` for the backend base URL, defaulting locally to `http://localhost:8000`.
+- Use `PUBLIC_API_URL` for the backend base URL, defaulting locally to `http://localhost:8000`.
 
 ## Route Map
 

@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.PUBLIC_SAUTIRELAY_API_URL || 'http://localhost:8000';
+const apiBaseUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
 
 export type ReportCategory =
   | 'LAND_CONFLICT'

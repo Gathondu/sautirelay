@@ -5,23 +5,26 @@ from typing import Any
 import pytest
 from backend.app.core.config import get_settings
 from backend.app.services.clustering import EmbeddingService
-from backend.app.services.openai_intake import OpenAIIntakeService, _create_openai_client
+from backend.app.services.openai_intake import (
+    OpenAIIntakeService,
+    _create_openai_client,
+)
 
 
 def test_openai_settings_prefer_sautirelay_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
-    monkeypatch.setenv("SAUTIRELAY_OPENAI_API_KEY", "openrouter-key")
-    monkeypatch.setenv("SAUTIRELAY_OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
-    monkeypatch.setenv("SAUTIRELAY_OPENAI_MODEL", "openrouter/model")
-    monkeypatch.setenv("SAUTIRELAY_EMBEDDING_MODEL", "openrouter/embedding-model")
-    monkeypatch.setenv("SAUTIRELAY_EMBEDDING_DIMENSIONS", "384")
-    monkeypatch.setenv("SAUTIRELAY_EMBEDDING_INPUT_TYPE", "search_document")
+    monkeypatch.setenv("OPENAI_API_KEY", "openrouter-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("OPENAI_MODEL", "openrouter/model")
+    monkeypatch.setenv("EMBEDDING_MODEL", "openrouter/embedding-model")
+    monkeypatch.setenv("EMBEDDING_DIMENSIONS", "384")
+    monkeypatch.setenv("EMBEDDING_INPUT_TYPE", "search_document")
     monkeypatch.setenv(
-        "SAUTIRELAY_EMBEDDING_EXTRA_BODY",
+        "EMBEDDING_EXTRA_BODY",
         '{"provider":{"allow_fallbacks":true,"data_collection":"deny"}}',
     )
     monkeypatch.setenv(
-        "SAUTIRELAY_EMBEDDING_EXTRA_HEADERS",
+        "EMBEDDING_EXTRA_HEADERS",
         '{"HTTP-Referer":"http://localhost:5173","X-Title":"SautiRelay"}',
     )
     get_settings.cache_clear()
@@ -64,8 +67,8 @@ def test_intake_service_passes_configured_base_url_to_openai_client(monkeypatch:
 
 
 def test_services_read_configured_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SAUTIRELAY_OPENAI_API_KEY", "openrouter-key")
-    monkeypatch.setenv("SAUTIRELAY_OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "openrouter-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
     get_settings.cache_clear()
 
     intake_service = OpenAIIntakeService()
