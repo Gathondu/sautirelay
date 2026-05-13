@@ -124,6 +124,18 @@ def test_s3_vector_region_validation_rejects_unsupported_region() -> None:
         validate_s3_vectors_region("antarctica-1")
 
 
+def test_runtime_region_uses_non_reserved_lambda_env_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.app.core.config import get_settings
+
+    monkeypatch.setenv("AWS_REGION", "us-east-1")
+    monkeypatch.setenv("SAUTIRELAY_AWS_REGION", "af-south-1")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+
+    assert settings.aws_region == "af-south-1"
+
+
 def test_lambda_handler_is_callable() -> None:
     from backend.app.lambda_handler import handler
 

@@ -11,7 +11,7 @@ locals {
 
   lambda_environment = {
     ENV                             = var.environment
-    AWS_REGION                      = var.aws_region
+    SAUTIRELAY_AWS_REGION           = var.aws_region
     REPOSITORY_BACKEND              = "dynamodb"
     DYNAMODB_TABLE_NAME             = aws_dynamodb_table.app.name
     S3_VECTOR_BUCKET_NAME           = aws_s3vectors_vector_bucket.embeddings.vector_bucket_name

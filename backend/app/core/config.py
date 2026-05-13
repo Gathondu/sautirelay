@@ -129,7 +129,7 @@ def get_settings() -> Settings:
         embedding_extra_body=_json_object_env("EMBEDDING_EXTRA_BODY"),
         embedding_extra_headers=_string_json_object_env("EMBEDDING_EXTRA_HEADERS"),
         repository_backend=os.getenv("REPOSITORY_BACKEND", "local").strip().lower(),
-        aws_region=os.getenv("AWS_REGION", "af-south-1").strip(),
+        aws_region=_optional_env("SAUTIRELAY_AWS_REGION", "AWS_REGION") or "af-south-1",
         dynamodb_table_name=_optional_env("DYNAMODB_TABLE_NAME"),
         s3_vector_bucket_name=_optional_env("S3_VECTOR_BUCKET_NAME"),
         s3_vector_index_name=_optional_env("S3_VECTOR_INDEX_NAME"),

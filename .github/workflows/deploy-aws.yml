@@ -225,7 +225,7 @@ jobs:
             --arg mediator_password "$MEDIATOR_PASSWORD" \
             '{Variables:{
               ENV:$env,
-              AWS_REGION:$region,
+              SAUTIRELAY_AWS_REGION:$region,
               REPOSITORY_BACKEND:"dynamodb",
               DYNAMODB_TABLE_NAME:$table,
               S3_VECTOR_BUCKET_NAME:$vector_bucket,
