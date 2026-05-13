@@ -57,6 +57,27 @@ def test_cors_preflight_rejects_unconfigured_origin(monkeypatch: pytest.MonkeyPa
     assert "access-control-allow-origin" not in response.headers
 
 
+def test_wildcard_cors_preflight_allows_cloudfront_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", "*")
+    monkeypatch.setenv("CORS_ALLOW_CREDENTIALS", "false")
+    get_settings.cache_clear()
+    module = importlib.import_module("backend.app.main")
+    module = importlib.reload(module)
+
+    with TestClient(module.app) as client:
+        response = client.options(
+            "/auth/login",
+            headers={
+                "Origin": "https://d2e0e7c8axfekc.cloudfront.net",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "Content-Type",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "*"
+
+
 def test_blank_boolean_env_values_fall_back_to_defaults(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

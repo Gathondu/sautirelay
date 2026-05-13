@@ -30,6 +30,7 @@ jobs:
       EMBEDDING_INPUT_TYPE: ${{ vars.EMBEDDING_INPUT_TYPE }}
       EMBEDDING_EXTRA_BODY: ${{ vars.EMBEDDING_EXTRA_BODY }}
       EMBEDDING_EXTRA_HEADERS: ${{ vars.EMBEDDING_EXTRA_HEADERS }}
+      CORS_ALLOW_ORIGINS: ${{ vars.CORS_ALLOW_ORIGINS }}
       CORS_ALLOW_CREDENTIALS: ${{ vars.CORS_ALLOW_CREDENTIALS }}
       CORS_ALLOW_METHODS: ${{ vars.CORS_ALLOW_METHODS }}
       CORS_ALLOW_HEADERS: ${{ vars.CORS_ALLOW_HEADERS }}
@@ -94,7 +95,7 @@ jobs:
             echo "TF_VAR_verifier_username=${VERIFIER_USERNAME:-verifier@sautirelay.dev}"
             echo "TF_VAR_mediator_username=${MEDIATOR_USERNAME:-mediator@sautirelay.dev}"
             echo "TF_VAR_backend_image_uri=bootstrap"
-            echo "TF_VAR_cors_allow_origins=*"
+            echo "TF_VAR_cors_allow_origins=${CORS_ALLOW_ORIGINS:-*}"
           } >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials
@@ -284,8 +285,6 @@ jobs:
           DYNAMODB_TABLE_NAME="$(terraform output -raw dynamodb_table_name)"
           S3_VECTOR_BUCKET_NAME="$(terraform output -raw s3_vector_bucket_name)"
           S3_VECTOR_INDEX_NAME="$(terraform output -raw s3_vector_index_name)"
-          CLOUDFRONT_DOMAIN_NAME="$(terraform output -raw cloudfront_domain_name)"
-          CORS_ORIGIN="https://${CLOUDFRONT_DOMAIN_NAME}"
           ENVIRONMENT_JSON="$(jq -n \
             --arg env "${ENVIRONMENT:-prod}" \
             --arg region "${AWS_REGION:-af-south-1}" \
@@ -301,6 +300,7 @@ jobs:
             --arg embedding_extra_body "${EMBEDDING_EXTRA_BODY:-{}}" \
             --arg embedding_extra_headers "${EMBEDDING_EXTRA_HEADERS:-{}}" \
             --arg cors_allow_credentials "${CORS_ALLOW_CREDENTIALS:-false}" \
+            --arg cors_allow_origins "${CORS_ALLOW_ORIGINS:-*}" \
             --arg cors_allow_methods "${CORS_ALLOW_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}" \
             --arg cors_allow_headers "${CORS_ALLOW_HEADERS:-Authorization,Content-Type}" \
             --arg demo_seed_enabled "${DEMO_SEED_ENABLED:-false}" \
@@ -308,7 +308,6 @@ jobs:
             --arg ai_allow_deterministic_fallback "${AI_ALLOW_DETERMINISTIC_FALLBACK:-false}" \
             --arg verifier_username "${VERIFIER_USERNAME:-verifier@sautirelay.dev}" \
             --arg mediator_username "${MEDIATOR_USERNAME:-mediator@sautirelay.dev}" \
-            --arg cors_origin "$CORS_ORIGIN" \
             --arg openai_api_key "$OPENAI_API_KEY" \
             --arg jwt_secret "$JWT_SECRET" \
             --arg verifier_password "$VERIFIER_PASSWORD" \
@@ -328,7 +327,7 @@ jobs:
               EMBEDDING_INPUT_TYPE:$embedding_input_type,
               EMBEDDING_EXTRA_BODY:$embedding_extra_body,
               EMBEDDING_EXTRA_HEADERS:$embedding_extra_headers,
-              CORS_ALLOW_ORIGINS:$cors_origin,
+              CORS_ALLOW_ORIGINS:$cors_allow_origins,
               CORS_ALLOW_CREDENTIALS:$cors_allow_credentials,
               CORS_ALLOW_METHODS:$cors_allow_methods,
               CORS_ALLOW_HEADERS:$cors_allow_headers,
