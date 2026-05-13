@@ -84,6 +84,7 @@ class EmbeddingService:
                     "input": body.replace("\n", " "),
                     "model": self.model,
                 }
+                open_ai_model = self.model.startswith("text-embedding") or self.model.startswith("openai/")
                 if self.dimensions is not None:
                     request_kwargs["dimensions"] = self.dimensions
 
@@ -94,6 +95,9 @@ class EmbeddingService:
                     request_kwargs["extra_body"] = extra_body
                 if self.extra_headers:
                     request_kwargs["extra_headers"] = self.extra_headers
+                if not open_ai_model:
+                    request_kwargs["encoding_format"] = "float"
+                    request_kwargs["check_embedding_ctx_length"] = False
 
                 response = client.embeddings.create(**request_kwargs)
                 return _normalize(response.data[0].embedding)
