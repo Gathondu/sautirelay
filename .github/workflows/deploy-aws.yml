@@ -156,6 +156,96 @@ jobs:
           terraform fmt -check
           terraform validate
 
+      - name: Adopt existing Terraform resources
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          NAME_PREFIX="$(printf "%s-%s" "${PROJECT_NAME:-sautirelay}" "${ENVIRONMENT:-prod}" | tr '[:upper:]' '[:lower:]')"
+          FRONTEND_BUCKET_NAME="${FRONTEND_BUCKET_NAME:-${FRONTEND_BUCKET:-${NAME_PREFIX}-frontend-${ACCOUNT_ID}}}"
+          LAMBDA_FUNCTION_NAME="${LAMBDA_FUNCTION_NAME:-${NAME_PREFIX}-api}"
+          DYNAMODB_TABLE_NAME="${DYNAMODB_TABLE_NAME:-${NAME_PREFIX}-app}"
+          VECTOR_BUCKET_NAME="${S3_VECTOR_BUCKET_NAME:-${NAME_PREFIX}-vectors-${ACCOUNT_ID}}"
+          VECTOR_INDEX_NAME="${S3_VECTOR_INDEX_NAME:-report-embeddings}"
+          ECR_REPOSITORY_NAME="${NAME_PREFIX}-backend"
+          LAMBDA_POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/${NAME_PREFIX}-lambda-data"
+          VECTOR_BUCKET_ARN="arn:aws:s3vectors:${AWS_REGION:-af-south-1}:${ACCOUNT_ID}:bucket/${VECTOR_BUCKET_NAME}"
+          VECTOR_INDEX_ARN="${VECTOR_BUCKET_ARN}/index/${VECTOR_INDEX_NAME}"
+
+          import_if_missing() {
+            local address="$1"
+            local import_id="$2"
+
+            if terraform state show "$address" >/dev/null 2>&1; then
+              echo "Terraform state already tracks ${address}."
+              return
+            fi
+
+            if terraform import -input=false "$address" "$import_id"; then
+              echo "Imported ${address}."
+            else
+              echo "Could not import ${address}; it may not exist yet, so Terraform may create it."
+            fi
+          }
+
+          import_if_missing "aws_ecr_repository.backend" "$ECR_REPOSITORY_NAME"
+          import_if_missing "aws_dynamodb_table.app" "$DYNAMODB_TABLE_NAME"
+          import_if_missing "aws_s3vectors_vector_bucket.embeddings" "$VECTOR_BUCKET_ARN"
+          import_if_missing "aws_s3vectors_index.report_embeddings" "$VECTOR_INDEX_ARN"
+          import_if_missing "aws_s3_bucket.frontend" "$FRONTEND_BUCKET_NAME"
+          import_if_missing "aws_s3_bucket_public_access_block.frontend" "$FRONTEND_BUCKET_NAME"
+          import_if_missing "aws_s3_bucket_ownership_controls.frontend" "$FRONTEND_BUCKET_NAME"
+          import_if_missing "aws_s3_bucket_versioning.frontend" "$FRONTEND_BUCKET_NAME"
+          import_if_missing "aws_s3_bucket_server_side_encryption_configuration.frontend" "$FRONTEND_BUCKET_NAME"
+          import_if_missing "aws_s3_bucket_policy.frontend" "$FRONTEND_BUCKET_NAME"
+
+          OAC_ID="$(aws cloudfront list-origin-access-controls \
+            --query "OriginAccessControlList.Items[?Name=='${NAME_PREFIX}-frontend-oac'].Id | [0]" \
+            --output text)"
+          if [ -n "$OAC_ID" ] && [ "$OAC_ID" != "None" ]; then
+            import_if_missing "aws_cloudfront_origin_access_control.frontend" "$OAC_ID"
+          fi
+
+          DISTRIBUTION_ID="$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Comment=='${NAME_PREFIX} frontend'].Id | [0]" \
+            --output text)"
+          if [ -n "$DISTRIBUTION_ID" ] && [ "$DISTRIBUTION_ID" != "None" ]; then
+            import_if_missing "aws_cloudfront_distribution.frontend" "$DISTRIBUTION_ID"
+          fi
+
+          import_if_missing "aws_iam_role.lambda" "${NAME_PREFIX}-lambda"
+          import_if_missing "aws_iam_policy.lambda_data" "$LAMBDA_POLICY_ARN"
+          import_if_missing "aws_iam_role_policy_attachment.lambda_logs" "${NAME_PREFIX}-lambda/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          import_if_missing "aws_iam_role_policy_attachment.lambda_data" "${NAME_PREFIX}-lambda/${LAMBDA_POLICY_ARN}"
+          import_if_missing "aws_cloudwatch_log_group.backend" "/aws/lambda/${LAMBDA_FUNCTION_NAME}"
+          import_if_missing "aws_lambda_function.backend" "$LAMBDA_FUNCTION_NAME"
+
+          API_ID="$(aws apigatewayv2 get-apis \
+            --query "Items[?Name=='${NAME_PREFIX}-api'].ApiId | [0]" \
+            --output text)"
+          if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+            import_if_missing "aws_apigatewayv2_api.backend" "$API_ID"
+            import_if_missing "aws_apigatewayv2_stage.backend" "${API_ID}/\$default"
+
+            INTEGRATION_ID="$(aws apigatewayv2 get-integrations --api-id "$API_ID" \
+              --query "Items[?IntegrationType=='AWS_PROXY'].IntegrationId | [0]" \
+              --output text)"
+            if [ -n "$INTEGRATION_ID" ] && [ "$INTEGRATION_ID" != "None" ]; then
+              import_if_missing "aws_apigatewayv2_integration.backend" "${API_ID}/${INTEGRATION_ID}"
+            fi
+
+            ROUTE_ID="$(aws apigatewayv2 get-routes --api-id "$API_ID" \
+              --query "Items[?RouteKey=='\$default'].RouteId | [0]" \
+              --output text)"
+            if [ -n "$ROUTE_ID" ] && [ "$ROUTE_ID" != "None" ]; then
+              import_if_missing "aws_apigatewayv2_route.backend" "${API_ID}/${ROUTE_ID}"
+            fi
+
+            import_if_missing "aws_lambda_permission.api_gateway" "${LAMBDA_FUNCTION_NAME}/AllowApiGatewayInvoke"
+          fi
+
       - name: Bootstrap ECR
         working-directory: ${{ env.TERRAFORM_DIR }}
         run: terraform apply -target=aws_ecr_repository.backend -auto-approve
