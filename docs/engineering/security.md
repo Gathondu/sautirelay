@@ -7,9 +7,9 @@ SautiRelay handles sensitive community reports. Collect only what is needed to r
 ## Reporter Safety
 
 - Do not require reporter identity.
-- Do not expose optional contact details in relay summaries.
+- Do not expose optional contact details in report summaries.
 - Do not store precise coordinates by default.
-- Generalize location before relay or display.
+- Generalize location before report or display.
 - Redact obvious names, phone numbers, emails, and sensitive identifiers before responder handoff.
 
 ## Secrets

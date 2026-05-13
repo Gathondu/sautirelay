@@ -9,7 +9,7 @@ The app is planned as a local-first Svelte 5 + FastAPI project. The frontend use
 - Build and test locally first.
 - Document future AWS architecture without adding deployment code.
 - Keep the OpenAPI contract as the boundary between frontend and backend.
-- Prioritize anonymous reporting, consent-based location handling, structured relay output, and responder routing workflows.
+- Prioritize anonymous reporting, consent-based location handling, structured report output, and responder routing workflows.
 - Use Svelte 5 strictly for frontend work: runes, CSS Modules, and no Svelte 3/4 syntax.
 
 ## Documentation

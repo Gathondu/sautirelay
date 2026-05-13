@@ -422,28 +422,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-  /relay:
-    post:
-      tags: [reports]
-      summary: Deprecated compatibility endpoint for anonymous report submission
-      operationId: createRelayDeprecated
-      deprecated: true
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReportCreateRequest"
-      responses:
-        "201":
-          description: Report was received safely.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ReportCreateResponse"
-        "422":
-          $ref: "#/components/responses/ValidationError"
 components:
   securitySchemes:
     bearerAuth:

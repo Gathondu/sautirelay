@@ -8,7 +8,7 @@
 4. Reporter selects an urgency hint.
 5. Reporter chooses a location mode: none, manual, or approximate with consent.
 6. Reporter submits the report.
-7. UI shows a structured relay result with category, urgency, anonymized summary, safety notes, and recommended route.
+7. UI shows a structured report result with category, urgency, anonymized summary, safety notes, and recommended route.
 
 ## Location Consent Flow
 
@@ -34,7 +34,7 @@
 
 ## Future Verification Flow
 
-1. Verifier receives a structured relay item.
+1. Verifier receives a structured report item.
 2. Verifier checks sensitivity, duplicate reports, location confidence, and urgency.
 3. Verifier selects a responder route or marks the report for more context.
 4. Responder receives only the information needed to act safely.

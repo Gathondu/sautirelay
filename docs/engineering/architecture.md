@@ -22,7 +22,7 @@ sautirelay/
 ## Service Boundaries
 
 - Frontend owns user interaction, form state, consent presentation, validation display, and API result rendering.
-- Backend owns validation, privacy handling, relay structuring, classification placeholders, and route recommendation.
+- Backend owns validation, privacy handling, report structuring, classification placeholders, and route recommendation.
 - OpenAPI owns the contract between frontend and backend.
 
 ## Frontend Boundary

@@ -9,11 +9,11 @@ Prefer targeted checks first, then broader validation.
 Use pytest. Cover:
 
 - Health check behavior.
-- Valid relay submission.
+- Valid report submission.
 - Validation failures.
 - Privacy redaction.
 - Location consent and generalization.
-- Service-level relay classification and route recommendation.
+- Service-level report classification and route recommendation.
 
 Run with:
 

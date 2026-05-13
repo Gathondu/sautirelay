@@ -10,12 +10,12 @@ People often see early warning signs before institutions can respond: local conf
 
 ## Product Objective
 
-SautiRelay turns a raw community report into a structured, privacy-preserving relay item that can be reviewed, triaged, and escalated. The platform should protect reporter identity by default, collect location only with clear purpose and consent, and support expansion beyond peacebuilding into wider community accountability workflows.
+SautiRelay turns a raw community report into a structured, privacy-preserving report item that can be reviewed, triaged, and escalated. The platform should protect reporter identity by default, collect location only with clear purpose and consent, and support expansion beyond peacebuilding into wider community accountability workflows.
 
 ## MVP Users
 
 - Community reporter: submits a concern without needing to reveal identity.
-- Verifier: reviews structured relay items and checks whether escalation is appropriate.
+- Verifier: reviews structured report items and checks whether escalation is appropriate.
 - Responder: receives routed reports and acts through an existing community, civil society, or support channel.
 - Administrator: configures local categories, responder routes, and safety policies in future phases.
 
@@ -23,7 +23,7 @@ SautiRelay turns a raw community report into a structured, privacy-preserving re
 
 - Anonymous report capture.
 - Approximate or manual location capture with no precise location by default.
-- Structured relay result with category, urgency, summary, safety notes, and recommended route.
+- Structured report result with category, urgency, summary, safety notes, and recommended route.
 - Local-only backend and frontend workflow.
 - Documentation-first architecture so implementation can proceed safely.
 

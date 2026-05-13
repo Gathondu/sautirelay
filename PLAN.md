@@ -8,7 +8,7 @@ The MVP lets a community member safely submit an early warning or civic concern,
 
 ## Problem And Objective
 
-Communities often notice early signs of conflict, civic harm, public service breakdown, aid diversion, displacement pressure, or safety risks before formal responders do. Reporting can be risky when identity, location, or raw wording exposes the reporter. SautiRelay solves this by turning a sensitive community signal into a safer, structured relay item that can be reviewed, triaged, and routed without exposing unnecessary personal details.
+Communities often notice early signs of conflict, civic harm, public service breakdown, aid diversion, displacement pressure, or safety risks before formal responders do. Reporting can be risky when identity, location, or raw wording exposes the reporter. SautiRelay solves this by turning a sensitive community signal into a safer, structured report item that can be reviewed, triaged, and routed without exposing unnecessary personal details.
 
 ## MVP Scope
 
@@ -16,7 +16,7 @@ Communities often notice early signs of conflict, civic harm, public service bre
 - Optional, consent-based location details with manual fallback.
 - AI-ready report structuring fields: category, urgency, summary, safety notes, and recommended route.
 - Human verification and responder handoff workflow documented in the product flow.
-- Local FastAPI endpoints for health checks and relay submission.
+- Local FastAPI endpoints for health checks and report submission.
 - Svelte UI for report capture, validation feedback, submission status, and response display.
 - Documentation for architecture, user flows, app components, backend design, API contract, and future AWS deployment assumptions.
 
@@ -24,7 +24,7 @@ Communities often notice early signs of conflict, civic harm, public service bre
 
 - No AWS deployment scripts or infrastructure-as-code.
 - No production authentication, SMS/USSD/WhatsApp integration, or responder organization onboarding.
-- No live LLM provider integration until the local contract and placeholder relay workflow are stable.
+- No live LLM provider integration until the local contract and placeholder report workflow are stable.
 - No storage of precise reporter identity or precise coordinates unless a later privacy review explicitly approves it.
 
 ## Repository Layout
@@ -85,7 +85,7 @@ sautirelay/
 4. Add canonical engineering standards under `docs/engineering/`.
 5. Add project-local Cursor adapters under `.cursor/rules/` and document the standards entrypoint in `docs/development-rules.md`.
 6. Add `infra/README.md` with future AWS architecture notes and an explicit "no deployment code yet" boundary.
-7. Add `backend/app/openapi.yaml` with `GET /status` and `POST /relay` as the initial contract.
+7. Add `backend/app/openapi.yaml` with `GET /status` and `POST /report` as the initial contract.
 8. Add `.env.example` for local-only defaults.
 9. Keep `uv.lock` trackable once generated.
 
@@ -93,10 +93,10 @@ sautirelay/
 
 1. Add `backend/pyproject.toml` with minimal FastAPI, Uvicorn, Pydantic, pytest, and httpx dependencies.
 2. Move FastAPI app construction into `backend/app/`.
-3. Add schemas for relay requests, relay responses, location hints, risk categories, urgency levels, and validation errors.
-4. Add routers for `/status` and `/relay`.
-5. Add a placeholder relay service that normalizes, classifies, redacts sensitive identity hints, and returns a deterministic route recommendation.
-6. Add backend tests for health checks, successful relay submission, validation errors, and no precise-location default behavior.
+3. Add schemas for report requests, report responses, location hints, risk categories, urgency levels, and validation errors.
+4. Add routers for `/status` and `/report`.
+5. Add a placeholder report service that normalizes, classifies, redacts sensitive identity hints, and returns a deterministic route recommendation.
+6. Add backend tests for health checks, successful report submission, validation errors, and no precise-location default behavior.
 
 ### Phase 3 - Frontend Foundation
 
@@ -133,7 +133,7 @@ docker compose -f docker/docker-compose.yml up
 
 ### Phase 6 - Future Expansion
 
-1. Add persistence for relay records after the local stateless flow is validated.
+1. Add persistence for report records after the local stateless flow is validated.
 2. Add responder dashboards, triage queues, audit trails, and escalation status updates.
 3. Add low-bandwidth channels such as SMS, USSD, WhatsApp, or offline-first mobile capture.
 4. Add provider-backed AI classification and redaction only after privacy and safety rules are documented.
@@ -144,8 +144,8 @@ docker compose -f docker/docker-compose.yml up
 1. Reporter opens SautiRelay and chooses to submit a community signal.
 2. Reporter enters what happened, where it is relevant, and how urgent it feels.
 3. Reporter chooses whether to share approximate location, manual location, or no location.
-4. Backend validates the report and produces a relay package with a category, urgency, anonymized summary, safety notes, and recommended responder route.
-5. UI shows the relay result and next-step status without exposing private reporter details.
+4. Backend validates the report and produces a report package with a category, urgency, anonymized summary, safety notes, and recommended responder route.
+5. UI shows the report result and next-step status without exposing private reporter details.
 
 ## OpenAPI Contract
 
@@ -154,7 +154,7 @@ docker compose -f docker/docker-compose.yml up
 Initial endpoints:
 
 - `GET /status`: health check for local dev and Docker Compose validation.
-- `POST /relay`: accepts a report payload and returns a structured relay package.
+- `POST /report`: accepts a report payload and returns a structured report package.
 
 Any contract change must be reflected in generated frontend API code and in `docs/api-contract.md`.
 
