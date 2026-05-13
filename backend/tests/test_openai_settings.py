@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from backend.app.core.config import get_settings
 from backend.app.services.clustering import EmbeddingService
-from backend.app.services.openai_intake import (OpenAIIntakeService,
-                                                _create_openai_client)
+from backend.app.services.openai_intake import OpenAIIntakeService, _create_openai_client
 
 
 def test_openai_settings_prefer_sautirelay_env(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi.testclient import TestClient
-
 from conftest import assert_json_response, mediator_headers, verifier_headers, water_conflict_report
+from fastapi.testclient import TestClient
 
 
 def submit_report(client: TestClient, text: str | None = None) -> dict[str, Any]:

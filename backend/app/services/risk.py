@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-
 RISK_LEVELS = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
 
 HIGH_RISK_CATEGORIES = {

@@ -119,7 +119,9 @@ class InMemorySautiRelayRepository:
         category_counts = Counter(str(report.category) for report in self._reports.values())
         risk_counts = Counter(str(report.risk_level) for report in self._reports.values())
         high_risk = sum(1 for report in self._reports.values() if str(report.risk_level) in {"HIGH", "CRITICAL"})
-        active_clusters = sum(1 for cluster in self._clusters.values() if str(cluster.status) not in {"RESOLVED", "ARCHIVED"})
+        active_clusters = sum(
+            1 for cluster in self._clusters.values() if str(cluster.status) not in {"RESOLVED", "ARCHIVED"}
+        )
         escalated_signals = sum(1 for report in self._reports.values() if str(report.status) == "ESCALATED")
         resolved_signals = sum(1 for report in self._reports.values() if str(report.status) == "RESOLVED")
         return DashboardMetrics(

@@ -10,7 +10,6 @@ from .openai_intake import (
     process_report_intake,
 )
 
-
 AIIntakeService = OpenAIIntakeService
 
 __all__ = [

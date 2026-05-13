@@ -1,10 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
-
 from backend.app.core.models import AuthenticatedUser, EscalationDocument, OutcomeCreateRequest, OutcomeDocument
 from backend.app.routers.dependencies import get_workflow_service, require_mediator
 from backend.app.services.workflow import WorkflowService
+from fastapi import APIRouter, Depends, status
 
 router = APIRouter(prefix="/escalations", tags=["escalations"])
 

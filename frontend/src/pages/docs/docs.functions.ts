@@ -8,7 +8,11 @@ export type DocGroup = {
   items: DocRecord[];
 };
 
-export function selectedDocFromId(docs: DocRecord[], docsById: Map<string, DocRecord>, docId?: string): DocRecord | undefined {
+export function selectedDocFromId(
+  docs: DocRecord[],
+  docsById: Map<string, DocRecord>,
+  docId?: string,
+): DocRecord | undefined {
   const normalized = docId?.replace(/\.md$/, '');
   if (normalized && docsById.has(normalized)) {
     return docsById.get(normalized);

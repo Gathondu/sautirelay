@@ -1,7 +1,5 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
-
 from backend.app.core.models import (
     AiApiResult,
     AuthenticatedUser,
@@ -16,6 +14,7 @@ from backend.app.core.models import (
 )
 from backend.app.routers.dependencies import get_workflow_service, require_verifier
 from backend.app.services.workflow import WorkflowService
+from fastapi import APIRouter, Depends, status
 
 router = APIRouter(tags=["reports"])
 

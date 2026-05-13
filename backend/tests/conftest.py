@@ -46,7 +46,7 @@ def deterministic_local_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 def client() -> Iterator[TestClient]:
     module = importlib.import_module("backend.app.main")
     module = importlib.reload(module)
-    app = getattr(module, "app")
+    app = module.app
 
     reset_state = getattr(app.state, "reset_state", None)
     if callable(reset_state):
@@ -88,8 +88,7 @@ def water_conflict_report(text: str | None = None) -> dict[str, Any]:
         "channel": "pwa",
         "language": "en",
         "categoryHint": "WATER_OR_RESOURCE_CONFLICT",
-        "text": text
-        or "There are rumors that youth from Village A may block herders at the water point tomorrow.",
+        "text": text or "There are rumors that youth from Village A may block herders at the water point tomorrow.",
         "timeframe": "WITHIN_24_HOURS",
         "immediateDanger": False,
         "location": {

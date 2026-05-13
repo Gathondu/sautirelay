@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import math
 import re
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Iterable, Sequence
+from typing import Any
 
 from backend.app.core.config import get_settings
 
@@ -79,7 +80,7 @@ class EmbeddingService:
                     client = OpenAI(api_key=self.api_key, base_url=self.base_url)
                 else:
                     client = OpenAI(api_key=self.api_key)
-                request_kwargs: dict[str, object] = {
+                request_kwargs: Mapping[str, Any] = {
                     "input": body.replace("\n", " "),
                     "model": self.model,
                 }
@@ -118,7 +119,7 @@ def deterministic_embedding(text: str | None, *, dimensions: int = DEFAULT_VECTO
         sign = 1.0 if digest[4] % 2 == 0 else -1.0
         vector[index] += sign
 
-    for left, right in zip(tokens, tokens[1:]):
+    for left, right in zip(tokens, tokens[1:], strict=False):
         pair = f"{left}_{right}"
         digest = hashlib.sha256(pair.encode("utf-8")).digest()
         index = int.from_bytes(digest[:4], "big") % dimensions
@@ -134,7 +135,7 @@ def cosine_similarity(left: Sequence[float] | None, right: Sequence[float] | Non
     right_norm = math.sqrt(sum(value * value for value in right))
     if left_norm == 0 or right_norm == 0:
         return 0.0
-    return sum(a * b for a, b in zip(left, right)) / (left_norm * right_norm)
+    return sum(a * b for a, b in zip(left, right, strict=True)) / (left_norm * right_norm)
 
 
 def find_similar_reports(
@@ -182,7 +183,7 @@ def generate_clusters(
     visited: set[int] = set()
     clusters: list[SignalCluster] = []
 
-    for index, report in enumerate(report_list):
+    for index, _report in enumerate(report_list):
         if index in visited:
             continue
 

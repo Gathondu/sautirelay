@@ -3,9 +3,8 @@ from __future__ import annotations
 import importlib
 
 import pytest
-from fastapi.testclient import TestClient
-
 from backend.app.core.config import get_settings
+from fastapi.testclient import TestClient
 
 
 def test_cors_origins_are_loaded_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:

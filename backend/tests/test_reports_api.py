@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi.testclient import TestClient
-
 from conftest import (
     aid_diversion_report,
     assert_json_response,
@@ -11,6 +9,7 @@ from conftest import (
     verifier_headers,
     water_conflict_report,
 )
+from fastapi.testclient import TestClient
 
 
 def submit_report(client: TestClient, payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -115,6 +114,4 @@ def test_unrelated_reports_remain_separate_in_verifier_queue(client: TestClient)
 
     assert first["reportId"] in report_by_id
     assert second["reportId"] in report_by_id
-    assert report_by_id[first["reportId"]].get("clusterId") != report_by_id[second["reportId"]].get(
-        "clusterId"
-    )
+    assert report_by_id[first["reportId"]].get("clusterId") != report_by_id[second["reportId"]].get("clusterId")

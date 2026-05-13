@@ -20,17 +20,15 @@
       <div class={styles.sidebarInner}>
         <p class={styles.eyebrow}>SautiRelay</p>
         <h1 class={styles.brand}>Documentation Browser</h1>
-        <p class={styles.intro}>
-          Browse the product and engineering docs without leaving the app.
-        </p>
+        <p class={styles.intro}>Browse the product and engineering docs without leaving the app.</p>
 
         <nav class={styles.nav} aria-label="Documentation navigation">
-          {#each groupedDocs as group}
+          {#each groupedDocs as group (group.label)}
             {#if group.items.length > 0}
               <section class={styles.group}>
                 <h2 class={styles.groupTitle}>{group.label}</h2>
 
-                {#each group.items as doc}
+                {#each group.items as doc (doc.id)}
                   <a
                     class={`${styles.docLink} ${doc.id === selectedDoc.id ? styles.docLinkActive : ''}`}
                     href={routeHref({ name: 'docs', docId: doc.id })}
@@ -56,6 +54,7 @@
       </header>
 
       <article class={styles.article}>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {@html selectedDoc.html}
       </article>
     </main>

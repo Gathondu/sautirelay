@@ -2,8 +2,6 @@ import re
 import secrets
 from uuid import uuid4
 
-from fastapi import HTTPException, status
-
 from backend.app.core.models import (
     ApproximateLocation,
     AuditLogDocument,
@@ -31,6 +29,7 @@ from backend.app.core.models import (
     utc_now,
 )
 from backend.app.repositories.memory import SautiRelayRepository
+from fastapi import HTTPException, status
 
 
 class WorkflowService:
@@ -198,7 +197,9 @@ class WorkflowService:
     ) -> EscalationDocument:
         cluster = await self.get_cluster(cluster_id)
         if cluster.status != ClusterStatus.verified:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cluster must be verified before escalation")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Cluster must be verified before escalation"
+            )
         escalation = self._build_escalation(cluster, None, request)
         updated_cluster = cluster.model_copy(update={"status": ClusterStatus.escalated, "updated_at": utc_now()})
         await self._repository.put_cluster(updated_cluster)
@@ -213,7 +214,9 @@ class WorkflowService:
     async def get_escalation(self, escalation_id: str, actor: AuthenticatedUser) -> EscalationDocument:
         escalation = await self._require_escalation(escalation_id)
         if escalation.assigned_to not in {actor.username, actor.id, "mediator-local-1"}:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Escalation is assigned to another mediator")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Escalation is assigned to another mediator"
+            )
         return escalation
 
     async def accept_escalation(self, escalation_id: str, actor: AuthenticatedUser) -> EscalationDocument:
@@ -289,7 +292,9 @@ class WorkflowService:
                     "report_count": len(report_ids),
                     "last_seen_at": now,
                     "risk_level": self._max_risk(cluster.risk_level, report.risk_level),
-                    "summary": f"{len(report_ids)} related SautiRelay reports in {region}. Human verification is recommended.",
+                    "summary": (
+                        f"{len(report_ids)} related SautiRelay reports in {region}. Human verification is recommended."
+                    ),
                     "updated_at": now,
                 }
             )
@@ -347,7 +352,9 @@ class WorkflowService:
     ) -> EscalationDocument:
         escalation = self._build_escalation(None, report, request)
         await self._repository.put_escalation(escalation)
-        await self._repository.put_report(report.model_copy(update={"status": ReportStatus.escalated, "updated_at": utc_now()}))
+        await self._repository.put_report(
+            report.model_copy(update={"status": ReportStatus.escalated, "updated_at": utc_now()})
+        )
         await self._audit(actor.id, "report.escalated", "report", report.id)
         return escalation
 
@@ -358,10 +365,30 @@ class WorkflowService:
         request: EscalationCreateRequest,
     ) -> EscalationDocument:
         now = utc_now()
-        source_summary = cluster.summary if cluster is not None else report.summary if report is not None else "Verified SautiRelay signal."
-        area = cluster.region if cluster is not None else self._region_from_location(report.approximate_location) if report is not None else "Approximate area only"
-        risk = cluster.risk_level if cluster is not None else report.risk_level if report is not None else RiskLevel.medium
-        category = cluster.category if cluster is not None else report.category if report is not None else ReportCategory.not_sure
+        source_summary = (
+            cluster.summary
+            if cluster is not None
+            else report.summary
+            if report is not None
+            else "Verified SautiRelay signal."
+        )
+        area = (
+            cluster.region
+            if cluster is not None
+            else self._region_from_location(report.approximate_location)
+            if report is not None
+            else "Approximate area only"
+        )
+        risk = (
+            cluster.risk_level if cluster is not None else report.risk_level if report is not None else RiskLevel.medium
+        )
+        category = (
+            cluster.category
+            if cluster is not None
+            else report.category
+            if report is not None
+            else ReportCategory.not_sure
+        )
         brief = (
             "SautiRelay mediator brief\n\n"
             f"Risk: {str(risk)}\n"
@@ -390,15 +417,21 @@ class WorkflowService:
         if escalation.report_id is not None:
             report = await self._repository.get_report(escalation.report_id)
             if report is not None:
-                await self._repository.put_report(report.model_copy(update={"status": ReportStatus.resolved, "updated_at": utc_now()}))
+                await self._repository.put_report(
+                    report.model_copy(update={"status": ReportStatus.resolved, "updated_at": utc_now()})
+                )
         if escalation.cluster_id is not None:
             cluster = await self._repository.get_cluster(escalation.cluster_id)
             if cluster is not None:
-                await self._repository.put_cluster(cluster.model_copy(update={"status": ClusterStatus.resolved, "updated_at": utc_now()}))
+                await self._repository.put_cluster(
+                    cluster.model_copy(update={"status": ClusterStatus.resolved, "updated_at": utc_now()})
+                )
                 for report_id in cluster.report_ids:
                     report = await self._repository.get_report(report_id)
                     if report is not None:
-                        await self._repository.put_report(report.model_copy(update={"status": ReportStatus.resolved, "updated_at": utc_now()}))
+                        await self._repository.put_report(
+                            report.model_copy(update={"status": ReportStatus.resolved, "updated_at": utc_now()})
+                        )
 
     def _fallback_intake(self, report: ReportDocument) -> IntakeResult:
         raw_text = self._restore_local_placeholder(report.raw_text_encrypted)
@@ -482,7 +515,13 @@ class WorkflowService:
 
     @staticmethod
     def _region_from_location(location: ApproximateLocation) -> str:
-        return location.admin_level_2 or location.nearest_area or location.admin_level_1 or location.country or "Approximate area only"
+        return (
+            location.admin_level_2
+            or location.nearest_area
+            or location.admin_level_1
+            or location.country
+            or "Approximate area only"
+        )
 
     @staticmethod
     def _safe_status(status_value: ReportStatus | str) -> str:

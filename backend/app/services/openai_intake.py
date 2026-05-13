@@ -5,10 +5,9 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from backend.app.core.config import get_settings
 from openai import OpenAI
 from pydantic import BaseModel, Field
-
-from backend.app.core.config import get_settings
 
 from .clustering import EmbeddingService
 from .privacy import redact_sensitive_info, safe_location_view
@@ -354,7 +353,8 @@ class OpenAIIntakeService:
             area=str(area or "Approximate area only"),
             summary=redacted_summary,
             recommended_response=_mediator_steps(category),
-            safety_note=safety_note or "Do not disclose reporter details or accuse any group publicly before verification.",
+            safety_note=safety_note
+            or "Do not disclose reporter details or accuse any group publicly before verification.",
             follow_up_prompt="Record field notes, action taken, outcome, and whether follow-up is required.",
             provider="deterministic",
         )
@@ -527,6 +527,7 @@ def _fallback_signal_summary(signal: object, reports: list[object]) -> str:
             return int(val)
         except (TypeError, ValueError):
             return default
+
     report_count = len(reports) if reports else safe_int(_get(signal, "report_count", 1))
     category = _normalize_category(_get(signal, "category")) or "NOT_SURE"
     return (
@@ -539,11 +540,11 @@ def _public_dict(value: object) -> dict[str, Any]:
     if isinstance(value, dict):
         data = dict(value)
     elif hasattr(value, "to_dict"):
-        data = getattr(value, 'to_dict')()
+        data = value.to_dict()
     elif hasattr(value, "model_dump"):
-        data = getattr(value, 'model_dump')()
+        data = value.model_dump()
     elif hasattr(value, "dict"):
-        data = getattr(value, 'dict')()
+        data = value.dict()
     elif hasattr(value, "__dict__"):
         data = vars(value)
     else:

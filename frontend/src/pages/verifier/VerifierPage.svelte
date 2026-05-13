@@ -13,7 +13,10 @@
 
     try {
       const auth = await login('verifier@sautirelay.dev', 'verifier-dev-pass');
-      const [reportQueue, clusterQueue] = await Promise.all([listReports(auth.accessToken), listClusters(auth.accessToken)]);
+      const [reportQueue, clusterQueue] = await Promise.all([
+        listReports(auth.accessToken),
+        listClusters(auth.accessToken),
+      ]);
       reports = reportQueue.items;
       clusters = clusterQueue.items;
     } catch (error) {
@@ -51,7 +54,9 @@
           <span class={styles.pill}>{report.riskLevel ?? report.risk_level ?? 'MEDIUM'}</span>
         </div>
         <h2>{report.category}</h2>
-        <p class={styles.muted}>{report.summary ?? report.redactedText ?? report.translatedText ?? 'Report awaiting AI processing.'}</p>
+        <p class={styles.muted}>
+          {report.summary ?? report.redactedText ?? report.translatedText ?? 'Report awaiting AI processing.'}
+        </p>
       </article>
     {/each}
 

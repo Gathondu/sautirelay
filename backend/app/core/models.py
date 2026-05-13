@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Literal
 
@@ -6,7 +6,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def to_camel(value: str) -> str:
@@ -113,12 +113,26 @@ class ReportCategory(StrEnum):
 
 class ApproximateLocation(ApiModel):
     country: str | None = Field(default=None, max_length=120)
-    admin_level_1: str | None = Field(default=None, validation_alias=AliasChoices("admin_level_1", "adminLevel1"), max_length=160)
-    admin_level_2: str | None = Field(default=None, validation_alias=AliasChoices("admin_level_2", "adminLevel2"), max_length=160)
-    nearest_area: str | None = Field(default=None, validation_alias=AliasChoices("nearest_area", "nearestArea", "area"), max_length=200)
+    admin_level_1: str | None = Field(
+        default=None, validation_alias=AliasChoices("admin_level_1", "adminLevel1"), max_length=160
+    )
+    admin_level_2: str | None = Field(
+        default=None, validation_alias=AliasChoices("admin_level_2", "adminLevel2"), max_length=160
+    )
+    nearest_area: str | None = Field(
+        default=None, validation_alias=AliasChoices("nearest_area", "nearestArea", "area"), max_length=200
+    )
     landmark: str | None = Field(default=None, max_length=240)
-    location_precision: str = Field(default="COARSE", validation_alias=AliasChoices("location_precision", "locationPrecision", "precision"), max_length=80)
-    raw_location_text: str | None = Field(default=None, validation_alias=AliasChoices("raw_location_text", "rawLocationText", "areaDescription"), max_length=500)
+    location_precision: str = Field(
+        default="COARSE",
+        validation_alias=AliasChoices("location_precision", "locationPrecision", "precision"),
+        max_length=80,
+    )
+    raw_location_text: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("raw_location_text", "rawLocationText", "areaDescription"),
+        max_length=500,
+    )
 
 
 class ConsentInput(ApiModel):
@@ -138,8 +152,12 @@ class ReportCreateRequest(ApiModel):
     text: str = Field(min_length=10, max_length=5000)
     language: str = Field(default="English", min_length=2, max_length=80)
     channel: Literal["pwa", "sms_simulated", "whatsapp_simulated"] = "pwa"
-    category_hint: ReportCategory = Field(default=ReportCategory.not_sure, validation_alias=AliasChoices("category_hint", "categoryHint"))
-    timeframe: Urgency = Field(default=Urgency.unknown, validation_alias=AliasChoices("timeframe", "urgencyHint", "urgency_hint"))
+    category_hint: ReportCategory = Field(
+        default=ReportCategory.not_sure, validation_alias=AliasChoices("category_hint", "categoryHint")
+    )
+    timeframe: Urgency = Field(
+        default=Urgency.unknown, validation_alias=AliasChoices("timeframe", "urgencyHint", "urgency_hint")
+    )
     immediate_danger: bool = False
     location: ApproximateLocation = Field(default_factory=ApproximateLocation)
     consent: ConsentInput = Field(default_factory=ConsentInput)
@@ -293,8 +311,18 @@ class ClusterListResponse(ApiModel):
 
 
 class EscalationCreateRequest(ApiModel):
-    assigned_to: str = Field(default="mediator@sautirelay.dev", validation_alias=AliasChoices("assigned_to", "assignedTo", "mediatorId"), min_length=3, max_length=200)
-    assigned_organization: str = Field(default="Local mediation network", validation_alias=AliasChoices("assigned_organization", "assignedOrganization", "mediatorOrganizationId"), min_length=2, max_length=200)
+    assigned_to: str = Field(
+        default="mediator@sautirelay.dev",
+        validation_alias=AliasChoices("assigned_to", "assignedTo", "mediatorId"),
+        min_length=3,
+        max_length=200,
+    )
+    assigned_organization: str = Field(
+        default="Local mediation network",
+        validation_alias=AliasChoices("assigned_organization", "assignedOrganization", "mediatorOrganizationId"),
+        min_length=2,
+        max_length=200,
+    )
     urgency: Urgency = Urgency.within_24_hours
     safety_note: str = Field(default="Do not disclose reporter details.", max_length=1000)
     follow_up_due_at: datetime | None = None

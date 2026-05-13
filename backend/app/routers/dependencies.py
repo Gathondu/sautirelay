@@ -1,11 +1,10 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from backend.app.core.models import AuthenticatedUser, UserRole
 from backend.app.services.auth import AuthService
 from backend.app.services.workflow import WorkflowService
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

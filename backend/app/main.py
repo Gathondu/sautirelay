@@ -1,14 +1,13 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from backend.app.core.config import get_settings
 from backend.app.repositories.memory import InMemorySautiRelayRepository
 from backend.app.routers import auth, clusters, dashboard, escalations, reports, status
 from backend.app.services.auth import AuthService
 from backend.app.services.workflow import WorkflowService
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager

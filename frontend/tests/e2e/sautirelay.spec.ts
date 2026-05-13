@@ -8,9 +8,9 @@ test.describe.serial('SautiRelay integrated frontend workflow', () => {
 
     await expect(page.getByRole('heading', { name: 'Report early signs of conflict safely.' })).toBeVisible();
 
-    await page.getByLabel('Tell us what happened or what you heard').fill(
-      'There are rumors that youth may block herders from the water point tomorrow.',
-    );
+    await page
+      .getByLabel('Tell us what happened or what you heard')
+      .fill('There are rumors that youth may block herders from the water point tomorrow.');
     await page.getByLabel('Safest useful area').fill('El Fasher area');
     await page.getByLabel('Country').fill('Sudan');
     await page.getByLabel('Region / province / state').fill('Darfur');

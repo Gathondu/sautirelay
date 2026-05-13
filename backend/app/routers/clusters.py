@@ -1,8 +1,5 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from starlette import status
-
 from backend.app.core.models import (
     AuthenticatedUser,
     ClusterListResponse,
@@ -13,6 +10,8 @@ from backend.app.core.models import (
 )
 from backend.app.routers.dependencies import get_workflow_service, require_verifier
 from backend.app.services.workflow import WorkflowService
+from fastapi import APIRouter, Depends
+from starlette import status
 
 router = APIRouter(prefix="/clusters", tags=["clusters"])
 

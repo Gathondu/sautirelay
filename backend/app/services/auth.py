@@ -2,13 +2,13 @@ import base64
 import hashlib
 import hmac
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any, Mapping, TypedDict
-
-from fastapi import HTTPException, status
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
+from typing import Any, TypedDict
 
 from backend.app.core.config import Settings
 from backend.app.core.models import AuthenticatedUser, UserRole
+from fastapi import HTTPException, status
 
 
 class TokenClaims(TypedDict):
@@ -51,7 +51,7 @@ class AuthService:
         return user
 
     def create_access_token(self, user: AuthenticatedUser) -> str:
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=self._settings.jwt_ttl_seconds)
+        expires_at = datetime.now(UTC) + timedelta(seconds=self._settings.jwt_ttl_seconds)
         claims: TokenClaims = {
             "sub": user.id,
             "username": user.username,
@@ -63,8 +63,8 @@ class AuthService:
 
     def verify_access_token(self, token: str) -> AuthenticatedUser:
         claims = self._decode_jwt(token)
-        expires_at = datetime.fromtimestamp(claims["exp"], timezone.utc)
-        if expires_at <= datetime.now(timezone.utc):
+        expires_at = datetime.fromtimestamp(claims["exp"], UTC)
+        if expires_at <= datetime.now(UTC):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
         if claims["iss"] != self._settings.jwt_issuer:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token issuer")

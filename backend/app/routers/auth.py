@@ -1,11 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.models import AuthLoginRequest, AuthTokenResponse, UserSummary
 from backend.app.routers.dependencies import get_auth_service
 from backend.app.services.auth import AuthService
+from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

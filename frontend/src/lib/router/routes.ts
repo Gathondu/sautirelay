@@ -1,13 +1,13 @@
 export type AppRoute =
   | {
-      name: "docs";
+      name: 'docs';
       docId?: string;
     }
   | {
-      name: "report";
+      name: 'report';
     };
 
-export type AppRouteName = AppRoute["name"];
+export type AppRouteName = AppRoute['name'];
 
 export type PrimaryRoute = {
   name: AppRouteName;
@@ -15,35 +15,35 @@ export type PrimaryRoute = {
   href: string;
 };
 
-const defaultRoute: AppRoute = { name: "docs" };
+const defaultRoute: AppRoute = { name: 'docs' };
 
 export const primaryRoutes: PrimaryRoute[] = [
   {
-    name: "docs",
-    label: "Docs",
-    href: routeHref({ name: "docs" }),
+    name: 'docs',
+    label: 'Docs',
+    href: routeHref({ name: 'docs' }),
   },
   {
-    name: "report",
-    label: "Report",
-    href: routeHref({ name: "report" }),
+    name: 'report',
+    label: 'Report',
+    href: routeHref({ name: 'report' }),
   },
 ];
 
 export function parseRoute(hash: string): AppRoute {
-  const path = hash.replace(/^#\/?/, "").replace(/^\//, "");
+  const path = hash.replace(/^#\/?/, '').replace(/^\//, '');
   if (!path) return defaultRoute;
 
-  const [section, ...rest] = path.split("/");
+  const [section, ...rest] = path.split('/');
 
-  if (section === "report") {
-    return { name: "report" };
+  if (section === 'report') {
+    return { name: 'report' };
   }
 
-  if (section === "docs") {
+  if (section === 'docs') {
     return {
-      name: "docs",
-      docId: rest.join("/") || undefined,
+      name: 'docs',
+      docId: rest.join('/') || undefined,
     };
   }
 
@@ -51,7 +51,7 @@ export function parseRoute(hash: string): AppRoute {
 }
 
 export function routeHref(route: AppRoute): string {
-  if (route.name === "report") return "/";
+  if (route.name === 'report') return '/';
   if (route.docId) return `/docs/${route.docId}`;
-  return "/docs";
+  return '/docs';
 }

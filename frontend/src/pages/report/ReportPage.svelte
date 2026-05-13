@@ -91,7 +91,8 @@
     <p class={styles.eyebrow}>Anonymous by default</p>
     <h1 id="report-title">Report early signs of conflict safely.</h1>
     <p>
-      Share only the safest useful details. SautiRelay stores approximate location, creates a tracking code, and routes reports for human review before escalation.
+      Share only the safest useful details. SautiRelay stores approximate location, creates a tracking code, and routes
+      reports for human review before escalation.
     </p>
     <div class={styles.actions}>
       <a class={styles.primaryLink} href="#report-form">Report a concern</a>
@@ -102,7 +103,10 @@
   <section class={styles.formPanel} aria-labelledby="form-title" id="report-form">
     <div class={styles.safetyNotice}>
       <strong>Your safety comes first.</strong>
-      <span>Do not include your name, phone number, exact house, shelter, or sensitive identifying details unless it is necessary and safe.</span>
+      <span
+        >Do not include your name, phone number, exact house, shelter, or sensitive identifying details unless it is
+        necessary and safe.</span
+      >
     </div>
 
     {#if confirmation}
@@ -136,7 +140,11 @@
 
       <label class={styles.fullSpan}>
         <span>Tell us what happened or what you heard</span>
-        <textarea bind:value={text} rows="6" placeholder="Example: There are rumors that youth may block herders from the water point tomorrow."></textarea>
+        <textarea
+          bind:value={text}
+          rows="6"
+          placeholder="Example: There are rumors that youth may block herders from the water point tomorrow."
+        ></textarea>
       </label>
 
       <label>

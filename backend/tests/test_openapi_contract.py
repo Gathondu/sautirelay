@@ -7,7 +7,6 @@ from typing import Any
 import pytest
 import yaml
 
-
 OPENAPI_PATH = Path(__file__).resolve().parents[1] / "app" / "openapi.yaml"
 REQUIRED_OPERATIONS = {
     ("post", "/reports"),
@@ -47,9 +46,7 @@ def test_openapi_yaml_is_valid_and_named_for_sautirelay(openapi_contract: dict[s
 def test_openapi_defines_planned_backend_routes(openapi_contract: dict[str, Any]) -> None:
     paths = openapi_contract.get("paths", {})
     missing = [
-        f"{method.upper()} {path}"
-        for method, path in sorted(REQUIRED_OPERATIONS)
-        if method not in paths.get(path, {})
+        f"{method.upper()} {path}" for method, path in sorted(REQUIRED_OPERATIONS) if method not in paths.get(path, {})
     ]
     assert not missing, f"OpenAPI contract is missing planned operations: {missing}"
 

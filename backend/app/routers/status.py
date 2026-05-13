@@ -1,6 +1,5 @@
-from fastapi import APIRouter
-
 from backend.app.core.models import StatusResponse
+from fastapi import APIRouter
 
 router = APIRouter(tags=["status"])
 

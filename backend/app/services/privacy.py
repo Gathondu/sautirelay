@@ -4,9 +4,7 @@ import re
 from dataclasses import asdict, dataclass
 
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
-_PHONE_RE = re.compile(
-    r"(?<!\w)(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}(?!\w)"
-)
+_PHONE_RE = re.compile(r"(?<!\w)(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}(?!\w)")
 _COORDINATE_PAIR_RE = re.compile(r"(?<!\d)-?\d{1,2}\.\d{3,}\s*,\s*-?\d{1,3}\.\d{3,}(?!\d)")
 _PRECISE_PLACE_RE = re.compile(
     r"\b(?:behind|inside|at|next to|opposite)\s+[^.?!,;]{1,80}?"
@@ -17,16 +15,10 @@ _LANDMARK_RE = re.compile(
     r"\b(?:borehole|water point|well|clinic|market|bridge|school|camp block)\b",
     re.IGNORECASE,
 )
-_PERSON_WITH_TITLE_RE = re.compile(
-    r"\b(?:Mr|Mrs|Ms|Dr|Chief|Pastor|Imam|Sheikh|Elder)\.?\s+[A-Z][a-zA-Z'-]{2,}\b"
-)
+_PERSON_WITH_TITLE_RE = re.compile(r"\b(?:Mr|Mrs|Ms|Dr|Chief|Pastor|Imam|Sheikh|Elder)\.?\s+[A-Z][a-zA-Z'-]{2,}\b")
 _TWO_NAME_RE = re.compile(r"\b[A-Z][a-zA-Z'-]{2,}\s+[A-Z][a-zA-Z'-]{2,}\b")
-_SINGLE_NAME_CONTEXT_RE = re.compile(
-    r"\b(?:called|named|by|from)\s+([A-Z][a-zA-Z'-]{2,})\b"
-)
-_NAME_BEFORE_CONTEXT_RE = re.compile(
-    r"\b([A-Z][a-zA-Z'-]{2,})\s+(?:from|called|emailed|reported|said)\b"
-)
+_SINGLE_NAME_CONTEXT_RE = re.compile(r"\b(?:called|named|by|from)\s+([A-Z][a-zA-Z'-]{2,})\b")
+_NAME_BEFORE_CONTEXT_RE = re.compile(r"\b([A-Z][a-zA-Z'-]{2,})\s+(?:from|called|emailed|reported|said)\b")
 _POSSESSIVE_NAME_RE = re.compile(r"\b[A-Z][a-zA-Z'-]{2,}'s\b")
 
 
@@ -147,9 +139,9 @@ def _as_dict(value: object) -> dict[str, object]:
     if isinstance(value, dict):
         return value
     if hasattr(value, "model_dump"):
-        return getattr(value, 'model_dump')()
+        return value.model_dump()
     if hasattr(value, "dict"):
-        return getattr(value, 'dict')()
+        return value.dict()
     if hasattr(value, "__dict__"):
         return vars(value)
     return {}
