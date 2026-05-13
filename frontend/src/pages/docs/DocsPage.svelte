@@ -1,5 +1,6 @@
 <script lang="ts">
   import { categoryLabel, docs, docsById } from '../../lib/docs';
+  import * as m from '../../lib/paraglide/messages';
   import { routeHref } from '../../lib/router/routes';
   import { createDocGroups, selectedDocFromId } from './docs.functions';
   import styles from './DocsPage.module.css';
@@ -11,7 +12,7 @@
 </script>
 
 <svelte:head>
-  <title>{selectedDoc ? `${selectedDoc.title} | SautiRelay Docs` : 'SautiRelay Docs'}</title>
+  <title>{selectedDoc ? `${selectedDoc.title} | ${m.docs_page_title()}` : m.docs_page_title()}</title>
 </svelte:head>
 
 {#if selectedDoc}
@@ -19,10 +20,10 @@
     <aside class={styles.sidebar}>
       <div class={styles.sidebarInner}>
         <p class={styles.eyebrow}>SautiRelay</p>
-        <h1 class={styles.brand}>Documentation Browser</h1>
-        <p class={styles.intro}>Browse the product and engineering docs without leaving the app.</p>
+        <h1 class={styles.brand}>{m.docs_browser_title()}</h1>
+        <p class={styles.intro}>{m.docs_intro()}</p>
 
-        <nav class={styles.nav} aria-label="Documentation navigation">
+        <nav class={styles.nav} aria-label={m.docs_navigation_label()}>
           {#each groupedDocs as group (group.label)}
             {#if group.items.length > 0}
               <section class={styles.group}>

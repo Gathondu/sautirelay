@@ -228,8 +228,10 @@ class AiApiResult(ApiModel):
 
 class ReportDocument(ApiModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(alias="reportId")
-    public_tracking_code: str = Field(alias="trackingCode")
+    id: str = Field(alias="reportId", validation_alias=AliasChoices("id", "report_id", "reportId"))
+    public_tracking_code: str = Field(
+        alias="trackingCode", validation_alias=AliasChoices("public_tracking_code", "tracking_code", "trackingCode")
+    )
     submitted_at: datetime
     channel: str
     language: str
@@ -281,7 +283,7 @@ class VerificationDocument(ApiModel):
 
 class SignalClusterDocument(ApiModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(alias="clusterId")
+    id: str = Field(alias="clusterId", validation_alias=AliasChoices("id", "cluster_id", "clusterId"))
     title: str
     category: ReportCategory
     region: str
@@ -334,7 +336,7 @@ class EscalationCreateRequest(ApiModel):
 
 class EscalationDocument(ApiModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(alias="escalationId")
+    id: str = Field(alias="escalationId", validation_alias=AliasChoices("id", "escalation_id", "escalationId"))
     cluster_id: str | None = None
     report_id: str | None = None
     assigned_to: str
@@ -363,7 +365,7 @@ class OutcomeCreateRequest(ApiModel):
 
 class OutcomeDocument(ApiModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: str = Field(alias="outcomeId")
+    id: str = Field(alias="outcomeId", validation_alias=AliasChoices("id", "outcome_id", "outcomeId"))
     escalation_id: str
     outcome_type: OutcomeType
     notes: str

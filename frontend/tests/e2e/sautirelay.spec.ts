@@ -3,6 +3,37 @@ import { expect, test } from '@playwright/test';
 test.describe.serial('SautiRelay integrated frontend workflow', () => {
   let trackingCode = '';
 
+  test('switches, persists, and falls back for interface locales', async ({ browser, page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => document.documentElement.dataset.sautirelayHydrated === 'true');
+    await expect(page.getByRole('heading', { name: 'Report early signs of conflict safely.' })).toBeVisible();
+
+    await page.getByLabel('Interface language').selectOption('sw');
+    await page.waitForFunction(() => document.documentElement.dataset.sautirelayHydrated === 'true');
+    await expect(page.getByRole('heading', { name: 'Ripoti dalili za mapema za migogoro kwa usalama.' })).toBeVisible();
+    await page.reload();
+    await page.waitForFunction(() => document.documentElement.dataset.sautirelayHydrated === 'true');
+    await expect(page.getByRole('heading', { name: 'Ripoti dalili za mapema za migogoro kwa usalama.' })).toBeVisible();
+
+    await page.getByLabel('Lugha ya kiolesura').selectOption('ar');
+    await page.waitForFunction(() => document.documentElement.dataset.sautirelayHydrated === 'true');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByRole('heading', { name: 'أبلغ بأمان عن العلامات المبكرة للنزاع.' })).toBeVisible();
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+
+    const fallbackContext = await browser.newContext({ locale: 'zu-ZA' });
+    const fallbackPage = await fallbackContext.newPage();
+    await fallbackPage.goto('/');
+    await fallbackPage.waitForFunction(() => document.documentElement.dataset.sautirelayHydrated === 'true');
+    await expect(fallbackPage.getByRole('heading', { name: 'Report early signs of conflict safely.' })).toBeVisible();
+    await expect(fallbackPage.locator('html')).toHaveAttribute('lang', 'en');
+    await fallbackContext.close();
+  });
+
   test('submits an anonymous report and checks reporter-safe status', async ({ page }) => {
     await page.goto('/');
 

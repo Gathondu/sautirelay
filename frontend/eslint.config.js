@@ -14,6 +14,7 @@ export default defineConfig(
       'dist/**',
       'node_modules/**',
       'playwright-report/**',
+      'src/lib/paraglide/**',
       'test-results/**',
       'vite.config.ts.timestamp-*',
     ],

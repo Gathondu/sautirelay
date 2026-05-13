@@ -6,6 +6,4 @@
   let { children }: { children: Snippet } = $props();
 </script>
 
-<AppLayout>
-  {@render children()}
-</AppLayout>
+<AppLayout>{@render children()}</AppLayout>

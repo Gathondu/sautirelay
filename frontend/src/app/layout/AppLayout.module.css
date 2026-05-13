@@ -26,7 +26,10 @@
 .nav {
   display: flex;
   align-items: center;
+  flex: 1;
+  justify-content: flex-end;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .navLink {
@@ -50,6 +53,24 @@
   color: #fff8ec;
 }
 
+.languageControl {
+  display: grid;
+  gap: 0.2rem;
+  color: #4c5c58;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.languageControl select {
+  min-height: 2.25rem;
+  border: 1px solid rgba(23, 49, 45, 0.24);
+  border-radius: 8px;
+  padding: 0 0.6rem;
+  background: #fffdf9;
+  color: #17312d;
+  font: inherit;
+}
+
 @media (max-width: 560px) {
   .topbar {
     align-items: stretch;
@@ -58,10 +79,16 @@
 
   .nav {
     width: 100%;
+    flex-wrap: wrap;
+    justify-content: stretch;
   }
 
   .navLink {
     flex: 1;
     justify-content: center;
+  }
+
+  .languageControl {
+    width: 100%;
   }
 }

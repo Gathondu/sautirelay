@@ -34,7 +34,7 @@ The frontend owns report capture, consent presentation, validation display, and 
 
 Engineering standards live in `docs/engineering/`. The repo-level `AGENTS.md` is the portable entrypoint for agents and contributors. Cursor-specific files under `.cursor/rules/` are adapters that route to the canonical engineering docs.
 
-Because this repo currently uses Svelte with Vite and a separate FastAPI backend, SvelteKit-only patterns apply only if the project later adopts SvelteKit.
+Because this repo currently uses SvelteKit with Vite and a separate FastAPI backend, frontend routes live in SvelteKit while product workflow calls continue to go directly to FastAPI through the OpenAPI-aligned client.
 
 ## Request Flow
 

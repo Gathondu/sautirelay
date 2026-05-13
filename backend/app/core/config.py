@@ -14,7 +14,7 @@ DEFAULT_CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
 DEFAULT_CORS_ALLOW_HEADERS = ("Authorization", "Content-Type")
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-load_dotenv(REPO_ROOT / ".env", override=True)
+load_dotenv(REPO_ROOT / ".env", override=os.getenv("ENV", "dev").strip().lower() == "dev")
 
 
 @dataclass(frozen=True)

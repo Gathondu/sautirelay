@@ -15,6 +15,7 @@
     verifyCluster,
     verifyReport,
   } from '../../lib/api/sautirelay';
+  import * as m from '../../lib/paraglide/messages';
   import styles from '../operations.module.css';
 
   let isLoading = $state(false);
@@ -66,7 +67,7 @@
       reports = reportQueue.items;
       clusters = clusterQueue.items;
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Unable to load verifier queue.';
+      errorMessage = error instanceof Error ? error.message : m.verifier_error_load();
     } finally {
       isLoading = false;
     }
@@ -104,7 +105,7 @@
       isModalOpen = true;
       selectedType = 'report';
       selectedId = reportId;
-      modalError = 'Load the verifier queue first.';
+      modalError = m.modal_load_queue_first();
       return;
     }
 
@@ -126,7 +127,7 @@
       if (isAwaitingAi(report)) {
         modalError = '';
       } else {
-        modalError = error instanceof Error ? error.message : 'Unable to load report details.';
+        modalError = error instanceof Error ? error.message : m.modal_error_report_detail();
       }
     } finally {
       modalLoading = false;
@@ -141,7 +142,7 @@
       isModalOpen = true;
       selectedType = 'cluster';
       selectedId = clusterId;
-      modalError = 'Load the verifier queue first.';
+      modalError = m.modal_load_queue_first();
       return;
     }
 
@@ -157,7 +158,7 @@
     try {
       selectedClusterDetail = await getCluster(verifierToken, clusterId);
     } catch (error) {
-      modalError = error instanceof Error ? error.message : 'Unable to load cluster details.';
+      modalError = error instanceof Error ? error.message : m.modal_error_cluster_detail();
     } finally {
       modalLoading = false;
     }
@@ -165,15 +166,15 @@
 
   async function submitEscalation(): Promise<void> {
     if (selectedType !== 'cluster' || !selectedId) {
-      modalError = 'Escalation is only available for a selected cluster.';
+      modalError = m.modal_escalation_selected_cluster();
       return;
     }
     if (!verifierToken) {
-      modalError = 'Missing verifier session token. Reload the verifier queue.';
+      modalError = m.modal_missing_verifier_token();
       return;
     }
     if (!mediatorId.trim() || !actionBrief.trim() || !safetyNote.trim() || !followUpDueAt.trim()) {
-      modalError = 'Mediator ID, action brief, safety note, and follow-up date are required.';
+      modalError = m.modal_escalation_required();
       return;
     }
 
@@ -188,10 +189,10 @@
         urgency,
         followUpDueAt: followUpDueAt.trim(),
       });
-      modalSuccess = 'Cluster escalated to mediator successfully.';
+      modalSuccess = m.modal_cluster_escalated();
       await loadVerifierQueue();
     } catch (error) {
-      modalError = error instanceof Error ? error.message : 'Unable to escalate cluster.';
+      modalError = error instanceof Error ? error.message : m.modal_error_escalate();
     } finally {
       isSubmittingEscalation = false;
     }
@@ -206,10 +207,10 @@
     try {
       await processReport(verifierToken, selectedId);
       selectedReportDetail = await getReport(verifierToken, selectedId);
-      modalSuccess = 'AI intake completed for this report.';
+      modalSuccess = m.modal_ai_completed();
       await loadVerifierQueue();
     } catch (error) {
-      modalError = error instanceof Error ? error.message : 'Unable to process report with AI.';
+      modalError = error instanceof Error ? error.message : m.modal_error_process_report();
     } finally {
       isSubmittingDecision = false;
     }
@@ -228,10 +229,10 @@
         confidence: 0.85,
       });
       selectedReportDetail = await getReport(verifierToken, selectedId);
-      modalSuccess = 'Report marked as verified.';
+      modalSuccess = m.modal_report_verified();
       await loadVerifierQueue();
     } catch (error) {
-      modalError = error instanceof Error ? error.message : 'Unable to verify report.';
+      modalError = error instanceof Error ? error.message : m.modal_error_verify_report();
     } finally {
       isSubmittingDecision = false;
     }
@@ -250,10 +251,10 @@
         confidence: 0.85,
       });
       selectedClusterDetail = await getCluster(verifierToken, selectedId);
-      modalSuccess = 'Cluster marked as verified.';
+      modalSuccess = m.modal_cluster_verified();
       await loadVerifierQueue();
     } catch (error) {
-      modalError = error instanceof Error ? error.message : 'Unable to verify cluster.';
+      modalError = error instanceof Error ? error.message : m.modal_error_verify_cluster();
     } finally {
       isSubmittingDecision = false;
     }
@@ -261,17 +262,17 @@
 </script>
 
 <svelte:head>
-  <title>Verifier dashboard | SautiRelay</title>
+  <title>{m.verifier_page_title()} | SautiRelay</title>
 </svelte:head>
 
 <main class={styles.page}>
   <header class={styles.header}>
     <div>
-      <h1>Verifier dashboard</h1>
-      <p>Review redacted reports and clustered signals before mediator escalation.</p>
+      <h1>{m.verifier_heading()}</h1>
+      <p>{m.verifier_intro()}</p>
     </div>
     <button class={styles.button} type="button" disabled={isLoading} onclick={loadVerifierQueue}>
-      {isLoading ? 'Loading...' : 'Load seeded queue'}
+      {isLoading ? m.verifier_loading_button() : m.verifier_load_button()}
     </button>
   </header>
 
@@ -279,7 +280,7 @@
     <p class={styles.error} role="alert">{errorMessage}</p>
   {/if}
 
-  <section class={styles.grid} aria-label="Verifier queue">
+  <section class={styles.grid} aria-label={m.verifier_queue_label()}>
     {#each reports as report (report.reportId ?? report.id ?? report.trackingCode)}
       <article class={styles.card}>
         <div class={styles.meta}>
@@ -288,7 +289,7 @@
         </div>
         <h2>{report.category}</h2>
         <p class={styles.muted}>
-          {report.summary ?? report.redactedText ?? report.translatedText ?? 'Report awaiting AI processing.'}
+          {report.summary ?? report.redactedText ?? report.translatedText ?? m.report_awaiting_ai()}
         </p>
         <button
           class={styles.button}
@@ -296,7 +297,7 @@
           disabled={!getReportId(report)}
           onclick={() => openReportModal(report)}
         >
-          View
+          {m.view_button()}
         </button>
       </article>
     {/each}
@@ -306,7 +307,8 @@
         <div class={styles.meta}>
           <span class={styles.pill}>{cluster.status}</span>
           <span class={styles.pill}>{cluster.riskLevel ?? cluster.risk_level ?? 'MEDIUM'}</span>
-          <span class={styles.pill}>{cluster.reportCount ?? cluster.report_count ?? 0} reports</span>
+          <span class={styles.pill}>{m.reports_count({ count: cluster.reportCount ?? cluster.report_count ?? 0 })}</span
+          >
         </div>
         <h2>{cluster.title}</h2>
         <p class={styles.muted}>{cluster.summary}</p>
@@ -316,7 +318,7 @@
           disabled={!getClusterId(cluster)}
           onclick={() => openClusterModal(cluster)}
         >
-          View
+          {m.view_button()}
         </button>
       </article>
     {/each}
@@ -327,13 +329,17 @@
       <div class={styles.modalCard} role="dialog" aria-modal="true" aria-labelledby="verifier-modal-heading">
         <header class={styles.modalHeader}>
           <h2 id="verifier-modal-heading">
-            {selectedType === 'report' ? 'Report detail' : selectedType === 'cluster' ? 'Cluster detail' : 'Detail'}
+            {selectedType === 'report'
+              ? m.modal_report_detail()
+              : selectedType === 'cluster'
+                ? m.modal_cluster_detail()
+                : m.modal_detail()}
           </h2>
         </header>
 
         <div class={styles.modalBody}>
           {#if modalLoading}
-            <p class={styles.muted}>Loading detail...</p>
+            <p class={styles.muted}>{m.modal_loading_detail()}</p>
           {:else}
             {#if modalError}
               <p class={styles.error} role="alert">{modalError}</p>
@@ -346,13 +352,15 @@
                   {selectedReportDetail.riskLevel ?? selectedReportDetail.risk_level ?? 'MEDIUM'}
                 </span>
               </div>
-              <p>{selectedReportDetail.summary ?? selectedReportDetail.aiSummary ?? 'No summary available.'}</p>
-              <h3>Redacted text</h3>
-              <p class={styles.muted}>{selectedReportDetail.redactedText ?? 'No redacted text available.'}</p>
-              <h3>Translated text</h3>
-              <p class={styles.muted}>{selectedReportDetail.translatedText ?? 'No translated text available.'}</p>
-              <p class={styles.muted}>Related reports: {selectedReportDetail.relatedReportIds?.length ?? 0}</p>
-              <h3>Safety warnings</h3>
+              <p>{selectedReportDetail.summary ?? selectedReportDetail.aiSummary ?? m.modal_no_summary()}</p>
+              <h3>{m.modal_redacted_text()}</h3>
+              <p class={styles.muted}>{selectedReportDetail.redactedText ?? m.modal_no_redacted_text()}</p>
+              <h3>{m.modal_translated_text()}</h3>
+              <p class={styles.muted}>{selectedReportDetail.translatedText ?? m.modal_no_translated_text()}</p>
+              <p class={styles.muted}>
+                {m.modal_related_reports({ count: selectedReportDetail.relatedReportIds?.length ?? 0 })}
+              </p>
+              <h3>{m.modal_safety_warnings()}</h3>
               {#if (selectedReportDetail.safetyWarnings ?? []).length > 0}
                 <ul>
                   {#each selectedReportDetail.safetyWarnings ?? [] as warning (warning)}
@@ -360,7 +368,7 @@
                   {/each}
                 </ul>
               {:else}
-                <p class={styles.muted}>No safety warnings.</p>
+                <p class={styles.muted}>{m.modal_no_safety_warnings()}</p>
               {/if}
               <div class={styles.inlineActions}>
                 <button
@@ -369,7 +377,7 @@
                   disabled={isSubmittingDecision}
                   onclick={processSelectedReport}
                 >
-                  Run AI intake
+                  {m.modal_run_ai()}
                 </button>
                 <button
                   class={styles.button}
@@ -377,7 +385,7 @@
                   disabled={isSubmittingDecision}
                   onclick={verifySelectedReport}
                 >
-                  Mark verified
+                  {m.modal_mark_verified()}
                 </button>
               </div>
             {/if}
@@ -389,11 +397,11 @@
                   >{selectedReportPreview.riskLevel ?? selectedReportPreview.risk_level ?? 'MEDIUM'}</span
                 >
               </div>
-              <p>{selectedReportPreview.summary ?? 'No detail summary is available yet.'}</p>
+              <p>{selectedReportPreview.summary ?? m.modal_no_detail_summary()}</p>
               <p class={styles.muted}>
                 {isAwaitingAi(selectedReportPreview)
-                  ? 'This report is awaiting AI response. Please check again shortly.'
-                  : 'Detailed report content is not available yet for this item.'}
+                  ? m.modal_awaiting_ai_detail()
+                  : m.modal_report_detail_unavailable()}
               </p>
               {#if isAwaitingAi(selectedReportPreview)}
                 <button
@@ -402,7 +410,7 @@
                   disabled={isSubmittingDecision}
                   onclick={processSelectedReport}
                 >
-                  Run AI intake
+                  {m.modal_run_ai()}
                 </button>
               {/if}
             {/if}
@@ -415,12 +423,11 @@
                 </span>
               </div>
               <p>{selectedClusterDetail.summary}</p>
-              <h3>Recommended mediator action</h3>
+              <h3>{m.modal_recommended_action()}</h3>
               <p class={styles.muted}>
-                {selectedClusterDetail.recommendedMediatorAction ??
-                  'No mediator action recommendation is available yet.'}
+                {selectedClusterDetail.recommendedMediatorAction ?? m.modal_no_recommended_action()}
               </p>
-              <h3>Safety warnings</h3>
+              <h3>{m.modal_safety_warnings()}</h3>
               {#if (selectedClusterDetail.safetyWarnings ?? []).length > 0}
                 <ul>
                   {#each selectedClusterDetail.safetyWarnings ?? [] as warning (warning)}
@@ -428,9 +435,9 @@
                   {/each}
                 </ul>
               {:else}
-                <p class={styles.muted}>No safety warnings.</p>
+                <p class={styles.muted}>{m.modal_no_safety_warnings()}</p>
               {/if}
-              <h3>Reports in cluster ({(selectedClusterDetail.reportIds ?? []).length})</h3>
+              <h3>{m.modal_reports_in_cluster({ count: (selectedClusterDetail.reportIds ?? []).length })}</h3>
               {#if (selectedClusterDetail.reportIds ?? []).length > 0}
                 <ul>
                   {#each selectedClusterDetail.reportIds ?? [] as reportId (reportId)}
@@ -438,7 +445,7 @@
                   {/each}
                 </ul>
               {:else}
-                <p class={styles.muted}>No linked reports.</p>
+                <p class={styles.muted}>{m.modal_no_linked_reports()}</p>
               {/if}
 
               <div class={styles.inlineActions}>
@@ -448,25 +455,25 @@
                   disabled={isSubmittingDecision}
                   onclick={verifySelectedCluster}
                 >
-                  Mark cluster verified
+                  {m.modal_mark_cluster_verified()}
                 </button>
               </div>
 
-              <h3>Escalate to mediator</h3>
+              <h3>{m.modal_escalate_to_mediator()}</h3>
               <label class={styles.field}>
-                Mediator ID
+                {m.modal_mediator_id()}
                 <input bind:value={mediatorId} />
               </label>
               <label class={styles.field}>
-                Action brief
+                {m.modal_action_brief()}
                 <textarea bind:value={actionBrief}></textarea>
               </label>
               <label class={styles.field}>
-                Safety note
+                {m.modal_safety_note()}
                 <textarea bind:value={safetyNote}></textarea>
               </label>
               <label class={styles.field}>
-                Urgency
+                {m.modal_urgency()}
                 <select bind:value={urgency}>
                   {#each urgencyOptions as urgencyOption (urgencyOption)}
                     <option value={urgencyOption}>{urgencyOption}</option>
@@ -474,11 +481,11 @@
                 </select>
               </label>
               <label class={styles.field}>
-                Follow-up due at (ISO datetime)
-                <input bind:value={followUpDueAt} placeholder="2026-05-20T12:00:00Z" />
+                {m.modal_follow_up_due_at()}
+                <input bind:value={followUpDueAt} placeholder={m.modal_follow_up_placeholder()} />
               </label>
               <button class={styles.button} type="button" disabled={isSubmittingEscalation} onclick={submitEscalation}>
-                {isSubmittingEscalation ? 'Submitting...' : 'Escalate to mediator'}
+                {isSubmittingEscalation ? m.modal_escalating_button() : m.modal_escalate_to_mediator()}
               </button>
             {/if}
 
@@ -489,11 +496,13 @@
                   {selectedClusterPreview.riskLevel ?? selectedClusterPreview.risk_level ?? 'MEDIUM'}
                 </span>
                 <span class={styles.pill}
-                  >{selectedClusterPreview.reportCount ?? selectedClusterPreview.report_count ?? 0} reports</span
+                  >{m.reports_count({
+                    count: selectedClusterPreview.reportCount ?? selectedClusterPreview.report_count ?? 0,
+                  })}</span
                 >
               </div>
               <p>{selectedClusterPreview.summary}</p>
-              <p class={styles.muted}>Detailed cluster data is not available yet. You can close and retry.</p>
+              <p class={styles.muted}>{m.modal_cluster_detail_unavailable()}</p>
             {/if}
 
             {#if modalSuccess}
@@ -503,7 +512,7 @@
         </div>
 
         <div class={styles.modalActions}>
-          <button class={styles.buttonSecondary} type="button" onclick={closeModal}>Close</button>
+          <button class={styles.buttonSecondary} type="button" onclick={closeModal}>{m.modal_close()}</button>
         </div>
       </div>
     </div>

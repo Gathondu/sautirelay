@@ -6,6 +6,7 @@
     recordOutcome,
     type EscalationItem,
   } from '../../lib/api/sautirelay';
+  import * as m from '../../lib/paraglide/messages';
   import styles from '../operations.module.css';
 
   let isLoading = $state(false);
@@ -27,7 +28,7 @@
       const response = await listEscalations(auth.accessToken);
       escalations = response.items;
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Unable to load mediator assignments.';
+      errorMessage = error instanceof Error ? error.message : m.mediator_error_load();
     } finally {
       isLoading = false;
     }
@@ -46,10 +47,10 @@
     successMessage = '';
     try {
       await acceptEscalation(mediatorToken, id);
-      successMessage = 'Assignment accepted.';
+      successMessage = m.mediator_assignment_accepted();
       await loadEscalations();
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Unable to accept assignment.';
+      errorMessage = error instanceof Error ? error.message : m.mediator_error_accept();
     } finally {
       isSubmitting = false;
     }
@@ -59,7 +60,7 @@
     const id = escalationId(escalation);
     const notes = outcomeNotesById[id]?.trim();
     if (!id || !mediatorToken || !notes) {
-      errorMessage = 'Outcome notes are required.';
+      errorMessage = m.mediator_outcome_required();
       return;
     }
 
@@ -74,10 +75,10 @@
         followUpRequired: false,
       });
       outcomeNotesById = { ...outcomeNotesById, [id]: '' };
-      successMessage = 'Outcome recorded.';
+      successMessage = m.mediator_outcome_recorded();
       await loadEscalations();
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Unable to record outcome.';
+      errorMessage = error instanceof Error ? error.message : m.mediator_error_outcome();
     } finally {
       isSubmitting = false;
     }
@@ -85,17 +86,17 @@
 </script>
 
 <svelte:head>
-  <title>Mediator dashboard | SautiRelay</title>
+  <title>{m.mediator_page_title()} | SautiRelay</title>
 </svelte:head>
 
 <main class={styles.page}>
   <header class={styles.header}>
     <div>
-      <h1>Mediator dashboard</h1>
-      <p>View anonymized action briefs assigned to trusted mediators.</p>
+      <h1>{m.mediator_heading()}</h1>
+      <p>{m.mediator_intro()}</p>
     </div>
     <button class={styles.button} type="button" disabled={isLoading} onclick={loadEscalations}>
-      {isLoading ? 'Loading...' : 'Load assignments'}
+      {isLoading ? m.mediator_loading_button() : m.mediator_load_button()}
     </button>
   </header>
 
@@ -107,16 +108,16 @@
     <p class={styles.success} role="status">{successMessage}</p>
   {/if}
 
-  <section class={styles.grid} aria-label="Mediator assignments">
+  <section class={styles.grid} aria-label={m.mediator_assignments_label()}>
     {#each escalations as escalation (escalation.escalationId ?? escalation.id)}
       <article class={styles.card}>
         <div class={styles.meta}>
           <span class={styles.pill}>{escalation.status}</span>
           <span class={styles.pill}>{escalation.urgency}</span>
         </div>
-        <h2>{escalation.assignedTo ?? escalation.assigned_to ?? 'Mediator assignment'}</h2>
-        <p class={styles.muted}>{escalation.actionBrief ?? escalation.action_brief ?? 'Action brief pending.'}</p>
-        <p class={styles.muted}>{escalation.safetyNote ?? escalation.safety_note ?? 'Protect the source.'}</p>
+        <h2>{escalation.assignedTo ?? escalation.assigned_to ?? m.mediator_assignment_fallback()}</h2>
+        <p class={styles.muted}>{escalation.actionBrief ?? escalation.action_brief ?? m.mediator_action_pending()}</p>
+        <p class={styles.muted}>{escalation.safetyNote ?? escalation.safety_note ?? m.mediator_safety_pending()}</p>
         <div class={styles.inlineActions}>
           <button
             class={styles.buttonSecondary}
@@ -124,11 +125,11 @@
             disabled={isSubmitting}
             onclick={() => acceptAssignment(escalation)}
           >
-            Accept
+            {m.mediator_accept()}
           </button>
         </div>
         <label class={styles.field}>
-          Outcome notes
+          {m.mediator_outcome_notes()}
           <textarea
             value={outcomeNotesById[escalationId(escalation)] ?? ''}
             oninput={(event) => {
@@ -145,7 +146,7 @@
           disabled={isSubmitting}
           onclick={() => recordAssignmentOutcome(escalation)}
         >
-          Record outcome
+          {m.mediator_record_outcome()}
         </button>
       </article>
     {/each}

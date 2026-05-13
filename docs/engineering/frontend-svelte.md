@@ -2,12 +2,12 @@
 
 ## Stack
 
-- Svelte 5 with Vite.
+- Svelte 5 with SvelteKit and Vite.
 - TypeScript for frontend logic.
 - CSS Modules for styling.
 - `pnpm` for package operations.
 
-The current project is not SvelteKit. Do not add SvelteKit-only files or patterns unless the project explicitly adopts SvelteKit later.
+The current frontend uses SvelteKit file-based routes with a separate FastAPI backend. Do not add SvelteKit server API routes for product workflow calls unless a later security requirement needs a proxy.
 
 ## Package Commands
 
@@ -93,7 +93,16 @@ Use shared CSS variables for tokens once a design token file exists.
 
 Use generated API client code from `frontend/src/api/`. Do not hand-write fetch calls throughout components when a generated client exists.
 
-Frontend configuration should use public Vite env values such as `VITE_API_BASE_URL`.
+Frontend configuration should use public SvelteKit/Vite env values such as `PUBLIC_API_URL`.
+
+## Internationalization
+
+- Use Paraglide for UI internationalization.
+- Source messages live in `frontend/messages/`, with English as the base locale.
+- Import message functions from `frontend/src/lib/paraglide/messages` and call them directly in Svelte components.
+- Keep UI locale tags as BCP-47 codes such as `en`, `sw`, `fr`, `ar`, and `pt`.
+- Keep report payload language values aligned with the backend contract; do not substitute UI locale codes unless the backend contract changes.
+- Do not translate backend-returned operational data such as report statuses, risk levels, generated summaries, or enum values unless a local display mapping is intentionally added.
 
 ## Testing
 

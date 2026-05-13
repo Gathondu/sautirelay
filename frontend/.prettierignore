@@ -1,7 +1,8 @@
-node_modules/
 .svelte-kit/
 dist/
+node_modules/
 playwright-report/
+project.inlang/.meta.json
+project.inlang/README.md
+src/lib/paraglide/
 test-results/
-coverage/
-pnpm-lock.yaml
