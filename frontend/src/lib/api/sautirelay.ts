@@ -135,6 +135,145 @@ export type ClusterDetail = ClusterItem & {
   auditEvents: AuditEvent[];
 };
 
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+function asMetricItems(value: unknown): MetricItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is { label?: unknown; count?: unknown } => typeof item === 'object' && item !== null)
+    .map((item) => ({
+      label: typeof item.label === 'string' ? item.label : 'Unknown',
+      count: typeof item.count === 'number' ? item.count : 0,
+    }));
+}
+
+function normalizeAuthTokenResponse(
+  data: AuthTokenResponse & { access_token?: string; token_type?: string; expires_in?: number; role?: string },
+): AuthTokenResponse {
+  return {
+    ...data,
+    accessToken: data.accessToken ?? data.access_token ?? '',
+    tokenType: data.tokenType ?? data.token_type ?? 'bearer',
+    expiresIn: data.expiresIn ?? data.expires_in ?? 0,
+    role: data.role === 'mediator' ? 'mediator' : 'verifier',
+  };
+}
+
+function normalizeReportCreateResponse(
+  data: ReportCreateResponse & { report_id?: string; tracking_code?: string; safe_status?: string },
+): ReportCreateResponse {
+  return {
+    ...data,
+    reportId: data.reportId ?? data.report_id ?? '',
+    trackingCode: data.trackingCode ?? data.tracking_code ?? '',
+    safeStatus: data.safeStatus ?? data.safe_status ?? data.status ?? 'Received',
+    message: data.message ?? 'Your report was received safely.',
+  };
+}
+
+function normalizeReporterStatusResponse(
+  data: ReporterStatusResponse & { tracking_code?: string; safe_status?: string },
+): ReporterStatusResponse {
+  return {
+    ...data,
+    trackingCode: data.trackingCode ?? data.tracking_code,
+    safeStatus: data.safeStatus ?? data.safe_status ?? data.status,
+    status: data.status ?? data.safeStatus ?? data.safe_status,
+    message: data.message ?? 'No sensitive escalation details are shown in this view.',
+  };
+}
+
+function normalizeReportItem(data: ReportItem & { report_id?: string; tracking_code?: string }): ReportItem {
+  return {
+    ...data,
+    reportId: data.reportId ?? data.report_id ?? data.id ?? data.trackingCode ?? data.tracking_code,
+    trackingCode: data.trackingCode ?? data.tracking_code,
+    summary: data.summary ?? data.redactedText ?? data.translatedText,
+  };
+}
+
+function normalizeClusterItem(data: ClusterItem & { cluster_id?: string; report_count?: number }): ClusterItem {
+  return {
+    ...data,
+    clusterId: data.clusterId ?? data.cluster_id ?? data.id,
+    reportCount: data.reportCount ?? data.report_count ?? 0,
+    summary: data.summary ?? 'No cluster summary is available yet.',
+  };
+}
+
+function normalizeReportDetail(data: ReportDetail): ReportDetail {
+  const withSnakeCase = data as ReportDetail & { safety_warnings?: unknown; related_report_ids?: unknown };
+  const normalizedItem = normalizeReportItem(data);
+
+  return {
+    ...data,
+    reportId: normalizedItem.reportId,
+    trackingCode: normalizedItem.trackingCode,
+    summary: normalizedItem.summary,
+    safetyWarnings: asStringArray(data.safetyWarnings ?? withSnakeCase.safety_warnings),
+    relatedReportIds: asStringArray(data.relatedReportIds ?? withSnakeCase.related_report_ids),
+    auditEvents: Array.isArray(data.auditEvents) ? data.auditEvents : [],
+  };
+}
+
+function normalizeClusterDetail(data: ClusterDetail): ClusterDetail {
+  const withSnakeCase = data as ClusterDetail & {
+    report_ids?: unknown;
+    recommended_mediator_action?: string;
+    safety_warnings?: unknown;
+  };
+  const normalizedItem = normalizeClusterItem(data);
+
+  return {
+    ...data,
+    clusterId: normalizedItem.clusterId,
+    reportCount: normalizedItem.reportCount,
+    summary: normalizedItem.summary,
+    reportIds: asStringArray(data.reportIds ?? withSnakeCase.report_ids),
+    recommendedMediatorAction:
+      data.recommendedMediatorAction ??
+      withSnakeCase.recommended_mediator_action ??
+      'No mediator action recommendation is available yet.',
+    safetyWarnings: asStringArray(data.safetyWarnings ?? withSnakeCase.safety_warnings),
+    auditEvents: Array.isArray(data.auditEvents) ? data.auditEvents : [],
+  };
+}
+
+function normalizeEscalationItem(
+  data: EscalationItem & {
+    escalation_id?: string;
+    assigned_to?: string;
+    action_brief?: string;
+    safety_note?: string;
+  },
+): EscalationItem {
+  return {
+    ...data,
+    escalationId: data.escalationId ?? data.escalation_id ?? data.id ?? '',
+    assignedTo: data.assignedTo ?? data.assigned_to,
+    actionBrief: data.actionBrief ?? data.action_brief,
+    safetyNote: data.safetyNote ?? data.safety_note,
+    urgency: data.urgency ?? 'ROUTINE',
+    status: data.status ?? 'PENDING_ACCEPTANCE',
+  };
+}
+
+function normalizeDashboardMetrics(data: DashboardMetrics): DashboardMetrics {
+  return {
+    ...data,
+    totalReports: data.totalReports ?? data.total_reports ?? 0,
+    reportsByCategory: asMetricItems(data.reportsByCategory ?? data.reports_by_category),
+    riskLevels: asMetricItems(data.riskLevels ?? data.risk_levels),
+    activeClusters: data.activeClusters ?? data.active_clusters ?? 0,
+    escalatedSignals: data.escalatedSignals ?? data.escalated_signals ?? 0,
+    resolvedSignals: data.resolvedSignals ?? data.resolved_signals ?? 0,
+  };
+}
+
 export type EscalationItem = {
   escalationId?: string;
   id?: string;
@@ -202,6 +341,8 @@ export type DashboardMetrics = {
   resolved_signals?: number;
 };
 
+type MetricItem = { label: string; count: number };
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
@@ -219,46 +360,87 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function submitReport(report: ReportCreateRequest): Promise<ReportCreateResponse> {
-  return request<ReportCreateResponse>('/reports', {
+export async function submitReport(report: ReportCreateRequest): Promise<ReportCreateResponse> {
+  const data = await request<ReportCreateResponse>('/reports', {
     method: 'POST',
     body: JSON.stringify(report),
   });
+
+  return normalizeReportCreateResponse(
+    data as ReportCreateResponse & { report_id?: string; tracking_code?: string; safe_status?: string },
+  );
 }
 
-export function checkReportStatus(trackingCode: string): Promise<ReporterStatusResponse> {
-  return request<ReporterStatusResponse>(`/reports/status/${encodeURIComponent(trackingCode.trim())}`);
+export async function checkReportStatus(trackingCode: string): Promise<ReporterStatusResponse> {
+  const data = await request<ReporterStatusResponse>(`/reports/status/${encodeURIComponent(trackingCode.trim())}`);
+  return normalizeReporterStatusResponse(
+    data as ReporterStatusResponse & { tracking_code?: string; safe_status?: string },
+  );
 }
 
-export function login(username: string, password: string): Promise<AuthTokenResponse> {
-  return request<AuthTokenResponse>('/auth/login', {
+export async function login(username: string, password: string): Promise<AuthTokenResponse> {
+  const data = await request<AuthTokenResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password }),
   });
+
+  return normalizeAuthTokenResponse(
+    data as AuthTokenResponse & { access_token?: string; token_type?: string; expires_in?: number; role?: string },
+  );
 }
 
-export function listReports(token: string): Promise<{ items: ReportItem[]; total: number }> {
-  return request<{ items: ReportItem[]; total: number }>('/reports', {
+export async function listReports(token: string): Promise<{ items: ReportItem[]; total: number }> {
+  const data = await request<{ items: ReportItem[]; total: number } | ReportItem[]>('/reports', {
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
+
+  if (Array.isArray(data)) {
+    const items = data.map((item) =>
+      normalizeReportItem(item as ReportItem & { report_id?: string; tracking_code?: string }),
+    );
+    return { items, total: items.length };
+  }
+
+  const items = Array.isArray(data.items)
+    ? data.items.map((item) => normalizeReportItem(item as ReportItem & { report_id?: string; tracking_code?: string }))
+    : [];
+
+  return { items, total: typeof data.total === 'number' ? data.total : items.length };
 }
 
-export function listClusters(token: string): Promise<{ items: ClusterItem[]; total: number }> {
-  return request<{ items: ClusterItem[]; total: number }>('/clusters', {
+export async function listClusters(token: string): Promise<{ items: ClusterItem[]; total: number }> {
+  const data = await request<{ items: ClusterItem[]; total: number } | ClusterItem[]>('/clusters', {
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
+
+  if (Array.isArray(data)) {
+    const items = data.map((item) =>
+      normalizeClusterItem(item as ClusterItem & { cluster_id?: string; report_count?: number }),
+    );
+    return { items, total: items.length };
+  }
+
+  const items = Array.isArray(data.items)
+    ? data.items.map((item) =>
+        normalizeClusterItem(item as ClusterItem & { cluster_id?: string; report_count?: number }),
+      )
+    : [];
+
+  return { items, total: typeof data.total === 'number' ? data.total : items.length };
 }
 
-export function getReport(token: string, reportId: string): Promise<ReportDetail> {
-  return request<ReportDetail>(`/reports/${encodeURIComponent(reportId)}`, {
+export async function getReport(token: string, reportId: string): Promise<ReportDetail> {
+  const data = await request<ReportDetail>(`/reports/${encodeURIComponent(reportId)}`, {
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
+
+  return normalizeReportDetail(data);
 }
 
 export function processReport(token: string, reportId: string): Promise<unknown> {
@@ -280,12 +462,14 @@ export function verifyReport(token: string, reportId: string, payload: Verificat
   });
 }
 
-export function getCluster(token: string, clusterId: string): Promise<ClusterDetail> {
-  return request<ClusterDetail>(`/clusters/${encodeURIComponent(clusterId)}`, {
+export async function getCluster(token: string, clusterId: string): Promise<ClusterDetail> {
+  const data = await request<ClusterDetail>(`/clusters/${encodeURIComponent(clusterId)}`, {
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
+
+  return normalizeClusterDetail(data);
 }
 
 export function verifyCluster(token: string, clusterId: string, payload: VerificationRequest): Promise<unknown> {
@@ -319,17 +503,52 @@ export async function listEscalations(token: string): Promise<{ items: Escalatio
     },
   });
 
-  if (Array.isArray(data)) return { items: data, total: data.length };
-  return data;
+  if (Array.isArray(data)) {
+    const items = data.map((item) =>
+      normalizeEscalationItem(
+        item as EscalationItem & {
+          escalation_id?: string;
+          assigned_to?: string;
+          action_brief?: string;
+          safety_note?: string;
+        },
+      ),
+    );
+    return { items, total: items.length };
+  }
+
+  const items = Array.isArray(data.items)
+    ? data.items.map((item) =>
+        normalizeEscalationItem(
+          item as EscalationItem & {
+            escalation_id?: string;
+            assigned_to?: string;
+            action_brief?: string;
+            safety_note?: string;
+          },
+        ),
+      )
+    : [];
+
+  return { items, total: typeof data.total === 'number' ? data.total : items.length };
 }
 
-export function acceptEscalation(token: string, escalationId: string): Promise<EscalationItem> {
-  return request<EscalationItem>(`/escalations/${encodeURIComponent(escalationId)}/accept`, {
+export async function acceptEscalation(token: string, escalationId: string): Promise<EscalationItem> {
+  const data = await request<EscalationItem>(`/escalations/${encodeURIComponent(escalationId)}/accept`, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
+
+  return normalizeEscalationItem(
+    data as EscalationItem & {
+      escalation_id?: string;
+      assigned_to?: string;
+      action_brief?: string;
+      safety_note?: string;
+    },
+  );
 }
 
 export function recordOutcome(token: string, escalationId: string, payload: OutcomeCreateRequest): Promise<unknown> {
@@ -342,10 +561,12 @@ export function recordOutcome(token: string, escalationId: string, payload: Outc
   });
 }
 
-export function getMetrics(token: string): Promise<DashboardMetrics> {
-  return request<DashboardMetrics>('/dashboard/metrics', {
+export async function getMetrics(token: string): Promise<DashboardMetrics> {
+  const data = await request<DashboardMetrics>('/dashboard/metrics', {
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
+
+  return normalizeDashboardMetrics(data);
 }

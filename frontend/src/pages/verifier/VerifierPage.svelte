@@ -352,9 +352,9 @@
             <p class={styles.muted}>{selectedReportDetail.translatedText ?? 'No translated text available.'}</p>
             <p class={styles.muted}>Related reports: {selectedReportDetail.relatedReportIds?.length ?? 0}</p>
             <h3>Safety warnings</h3>
-            {#if selectedReportDetail.safetyWarnings.length > 0}
+            {#if (selectedReportDetail.safetyWarnings ?? []).length > 0}
               <ul>
-                {#each selectedReportDetail.safetyWarnings as warning (warning)}
+                {#each selectedReportDetail.safetyWarnings ?? [] as warning (warning)}
                   <li>{warning}</li>
                 {/each}
               </ul>
@@ -415,21 +415,23 @@
             </div>
             <p>{selectedClusterDetail.summary}</p>
             <h3>Recommended mediator action</h3>
-            <p class={styles.muted}>{selectedClusterDetail.recommendedMediatorAction}</p>
+            <p class={styles.muted}>
+              {selectedClusterDetail.recommendedMediatorAction ?? 'No mediator action recommendation is available yet.'}
+            </p>
             <h3>Safety warnings</h3>
-            {#if selectedClusterDetail.safetyWarnings.length > 0}
+            {#if (selectedClusterDetail.safetyWarnings ?? []).length > 0}
               <ul>
-                {#each selectedClusterDetail.safetyWarnings as warning (warning)}
+                {#each selectedClusterDetail.safetyWarnings ?? [] as warning (warning)}
                   <li>{warning}</li>
                 {/each}
               </ul>
             {:else}
               <p class={styles.muted}>No safety warnings.</p>
             {/if}
-            <h3>Reports in cluster ({selectedClusterDetail.reportIds.length})</h3>
-            {#if selectedClusterDetail.reportIds.length > 0}
+            <h3>Reports in cluster ({(selectedClusterDetail.reportIds ?? []).length})</h3>
+            {#if (selectedClusterDetail.reportIds ?? []).length > 0}
               <ul>
-                {#each selectedClusterDetail.reportIds as reportId (reportId)}
+                {#each selectedClusterDetail.reportIds ?? [] as reportId (reportId)}
                   <li>{reportId}</li>
                 {/each}
               </ul>
