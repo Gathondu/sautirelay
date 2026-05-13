@@ -8,11 +8,12 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
+    "generate:i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --strategy localStorage cookie preferredLanguage globalVariable baseLocale --silent",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run --exclude tests/e2e/** --passWithNoTests",
     "test:e2e": "playwright test",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check": "pnpm generate:i18n && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "validate": "pnpm lint && pnpm check && pnpm test"
   },
   "dependencies": {

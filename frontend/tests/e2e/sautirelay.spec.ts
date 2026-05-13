@@ -71,7 +71,7 @@ test.describe.serial('SautiRelay integrated frontend workflow', () => {
       page.waitForResponse((response) => response.url().endsWith('/clusters') && response.status() === 200),
       page.getByRole('button', { name: 'Load seeded queue' }).click(),
     ]);
-    await expect(page.getByLabel('Verifier queue')).toContainText('WATER_OR_RESOURCE_CONFLICT');
+    await expect(page.getByLabel('Verifier queue')).toContainText('PENDING_REVIEW');
     await expect(page.getByLabel('Verifier queue')).toContainText('[RESOURCE_POINT]');
 
     await page.goto('/analytics', { waitUntil: 'networkidle' });
