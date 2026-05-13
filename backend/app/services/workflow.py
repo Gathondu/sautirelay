@@ -1,3 +1,4 @@
+import logging
 import secrets
 from uuid import uuid4
 
@@ -39,8 +40,9 @@ from fastapi import HTTPException, status
 class WorkflowService:
     def __init__(self, repository: SautiRelayRepository) -> None:
         self._repository = repository
+        self._logger = logging.getLogger(__name__)
 
-    async def submit_report(self, request: ReportCreateRequest) -> ReportCreateResponse:
+    async def submit_report(self, request: ReportCreateRequest) -> ReportDocument:
         now = utc_now()
         report = ReportDocument.model_validate(
             {
@@ -68,20 +70,16 @@ class WorkflowService:
         )
         await self._repository.put_report(report)
         await self._audit(None, "report.submitted", "report", report.id)
-        try:
-            report = await self._process_report_with_ai(report.id, actor_id=None)
-        except HTTPException:
-            await self._repository.put_report(
-                report.model_copy(update={"status": ReportStatus.new, "updated_at": utc_now()})
-            )
-            raise
+        return report
+
+    def build_report_create_response(self, report: ReportDocument) -> ReportCreateResponse:
         return ReportCreateResponse.model_validate(
             {
                 "report_id": report.id,
                 "tracking_code": report.public_tracking_code,
                 "status": report.status,
                 "safe_status": self._safe_status(report.status),
-                "message": "Your report has been received safely.",
+                "message": "Your report has been received safely. Processing will continue in the background.",
             }
         )
 
@@ -98,9 +96,22 @@ class WorkflowService:
         return await self._require_report(report_id)
 
     async def process_report(self, report_id: str, actor: AuthenticatedUser) -> ReportDocument:
+        report = await self._require_report(report_id)
+        if report.status == ReportStatus.processing:
+            return report
+        if report.status not in {ReportStatus.new, ReportStatus.processing}:
+            return report
         report = await self._process_report_with_ai(report_id, actor_id=actor.id)
         await self._audit(actor.id, "report.processed", "report", report_id)
         return report
+
+    async def process_report_in_background(self, report_id: str, actor_id: str | None = None) -> None:
+        try:
+            await self._process_report_with_ai(report_id, actor_id=actor_id)
+        except HTTPException as exc:
+            await self._handle_background_report_failure(report_id, str(exc.detail))
+        except Exception as exc:  # pragma: no cover - defensive safety for background task failures
+            await self._handle_background_report_failure(report_id, str(exc))
 
     async def _process_report_with_ai(self, report_id: str, actor_id: str | None) -> ReportDocument:
         settings = get_settings()
@@ -174,7 +185,7 @@ class WorkflowService:
         await self._audit(actor.id, "report.verified", "report", report.id, {"decision": str(request.decision)})
         if request.decision == VerificationDecision.escalate_immediately:
             escalation_request = EscalationCreateRequest()
-            return await self._create_escalation_from_report(updated_report, escalation_request, actor)
+            return await self._queue_escalation_from_report(updated_report, escalation_request, actor)
         return updated_report
 
     async def list_clusters(self) -> list[SignalClusterDocument]:
@@ -242,12 +253,58 @@ class WorkflowService:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="Cluster must be verified before escalation"
             )
-        escalation = self._build_escalation(cluster, None, request)
+        now = utc_now()
+        escalation = EscalationDocument.model_validate(
+            {
+                "escalation_id": self._id("escalation"),
+                "cluster_id": cluster.id,
+                "report_id": None,
+                "assigned_to": request.assigned_to,
+                "assigned_organization": request.assigned_organization,
+                "action_brief": "Mediator brief is being prepared. Please refresh shortly.",
+                "safety_note": self._safe_mediator_note(request.safety_note),
+                "urgency": request.urgency,
+                "status": EscalationStatus.preparing_brief,
+                "sent_at": now,
+                "follow_up_due_at": request.follow_up_due_at,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
         updated_cluster = cluster.model_copy(update={"status": ClusterStatus.escalated, "updated_at": utc_now()})
         await self._repository.put_cluster(updated_cluster)
         await self._repository.put_escalation(escalation)
-        await self._audit(actor.id, "cluster.escalated", "cluster", cluster.id)
+        await self._audit(actor.id, "cluster.escalation_queued", "cluster", cluster.id)
         return escalation
+
+    async def finalize_cluster_escalation_brief(self, escalation_id: str, cluster_id: str, actor_id: str) -> None:
+        try:
+            cluster = await self.get_cluster(cluster_id)
+            escalation = await self._require_escalation(escalation_id)
+            request = EscalationCreateRequest.model_validate(
+                {
+                    "assigned_to": escalation.assigned_to,
+                    "assigned_organization": escalation.assigned_organization,
+                    "urgency": escalation.urgency,
+                    "safety_note": escalation.safety_note,
+                    "follow_up_due_at": escalation.follow_up_due_at,
+                }
+            )
+            completed = self._build_escalation(cluster, None, request).model_copy(
+                update={
+                    "id": escalation.id,
+                    "status": EscalationStatus.pending_acceptance,
+                    "sent_at": escalation.sent_at,
+                    "created_at": escalation.created_at,
+                    "updated_at": utc_now(),
+                }
+            )
+            await self._repository.put_escalation(completed)
+            await self._audit(actor_id, "cluster.escalated", "cluster", cluster.id)
+        except HTTPException as exc:
+            await self._handle_background_escalation_failure(escalation_id, str(exc.detail), actor_id)
+        except Exception as exc:  # pragma: no cover - defensive safety for background task failures
+            await self._handle_background_escalation_failure(escalation_id, str(exc), actor_id)
 
     async def list_escalations(self, actor: AuthenticatedUser) -> list[EscalationDocument]:
         escalations = await self._repository.list_escalations()
@@ -263,6 +320,11 @@ class WorkflowService:
 
     async def accept_escalation(self, escalation_id: str, actor: AuthenticatedUser) -> EscalationDocument:
         escalation = await self.get_escalation(escalation_id, actor)
+        if escalation.status == EscalationStatus.preparing_brief:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Escalation brief is still being prepared. Please refresh shortly.",
+            )
         updated = escalation.model_copy(
             update={"status": EscalationStatus.accepted, "accepted_at": utc_now(), "updated_at": utc_now()}
         )
@@ -471,6 +533,66 @@ class WorkflowService:
         await self._audit(actor.id, "report.escalated", "report", report.id)
         return escalation
 
+    async def _queue_escalation_from_report(
+        self,
+        report: ReportDocument,
+        request: EscalationCreateRequest,
+        actor: AuthenticatedUser,
+    ) -> EscalationDocument:
+        now = utc_now()
+        escalation = EscalationDocument.model_validate(
+            {
+                "escalation_id": self._id("escalation"),
+                "cluster_id": None,
+                "report_id": report.id,
+                "assigned_to": request.assigned_to,
+                "assigned_organization": request.assigned_organization,
+                "action_brief": "Mediator brief is being prepared. Please refresh shortly.",
+                "safety_note": self._safe_mediator_note(request.safety_note),
+                "urgency": request.urgency,
+                "status": EscalationStatus.preparing_brief,
+                "sent_at": now,
+                "follow_up_due_at": request.follow_up_due_at,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        await self._repository.put_escalation(escalation)
+        await self._repository.put_report(
+            report.model_copy(update={"status": ReportStatus.escalated, "updated_at": utc_now()})
+        )
+        await self._audit(actor.id, "report.escalation_queued", "report", report.id)
+        return escalation
+
+    async def finalize_report_escalation_brief(self, escalation_id: str, report_id: str, actor_id: str) -> None:
+        try:
+            report = await self._require_report(report_id)
+            escalation = await self._require_escalation(escalation_id)
+            request = EscalationCreateRequest.model_validate(
+                {
+                    "assigned_to": escalation.assigned_to,
+                    "assigned_organization": escalation.assigned_organization,
+                    "urgency": escalation.urgency,
+                    "safety_note": escalation.safety_note,
+                    "follow_up_due_at": escalation.follow_up_due_at,
+                }
+            )
+            completed = self._build_escalation(None, report, request).model_copy(
+                update={
+                    "id": escalation.id,
+                    "status": EscalationStatus.pending_acceptance,
+                    "sent_at": escalation.sent_at,
+                    "created_at": escalation.created_at,
+                    "updated_at": utc_now(),
+                }
+            )
+            await self._repository.put_escalation(completed)
+            await self._audit(actor_id, "report.escalated", "report", report.id)
+        except HTTPException as exc:
+            await self._handle_background_escalation_failure(escalation_id, str(exc.detail), actor_id)
+        except Exception as exc:  # pragma: no cover - defensive safety for background task failures
+            await self._handle_background_escalation_failure(escalation_id, str(exc), actor_id)
+
     def _build_escalation(
         self,
         cluster: SignalClusterDocument | None,
@@ -615,6 +737,35 @@ class WorkflowService:
         }
         return mapping.get(status_text, "Under review")
 
+    async def _handle_background_report_failure(self, report_id: str, detail: str) -> None:
+        self._logger.warning("Background report processing failed for %s: %s", report_id, detail)
+        report = await self._repository.get_report(report_id)
+        if report is None:
+            return
+        await self._repository.put_report(report.model_copy(update={"status": ReportStatus.new, "updated_at": utc_now()}))
+        await self._audit(None, "report.ai_processing_failed", "report", report_id, {"detail": detail[:200]})
+
+    async def _handle_background_escalation_failure(self, escalation_id: str, detail: str, actor_id: str) -> None:
+        self._logger.warning("Background escalation brief generation failed for %s: %s", escalation_id, detail)
+        escalation = await self._repository.get_escalation(escalation_id)
+        if escalation is None:
+            return
+        failed = escalation.model_copy(
+            update={
+                "status": EscalationStatus.pending_acceptance,
+                "action_brief": "Mediator brief could not be generated automatically. Please proceed with manual review.",
+                "updated_at": utc_now(),
+            }
+        )
+        await self._repository.put_escalation(failed)
+        await self._audit(
+            actor_id,
+            "escalation.brief_generation_failed",
+            "escalation",
+            escalation_id,
+            {"detail": detail[:200]},
+        )
+
     async def _audit(
         self,
         actor_id: str | None,
@@ -680,6 +831,7 @@ class WorkflowRules:
     def can_transition_escalation(self, from_status: str, to_status: str) -> bool:
         allowed = {
             "ESCALATED": {EscalationStatus.accepted.value},
+            EscalationStatus.preparing_brief.value: {EscalationStatus.pending_acceptance.value},
             EscalationStatus.pending_acceptance.value: {EscalationStatus.accepted.value},
             EscalationStatus.accepted.value: {
                 EscalationStatus.action_recorded.value,

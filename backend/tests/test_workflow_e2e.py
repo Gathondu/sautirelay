@@ -88,7 +88,7 @@ def test_full_report_to_mediator_outcome_workflow(client: TestClient) -> None:
 
     escalation = escalate_cluster_or_report(client, created["reportId"], verifier_auth)
     escalation_id = escalation["escalationId"]
-    assert escalation["status"] in {"ESCALATED", "PENDING_ACCEPTANCE"}
+    assert escalation["status"] in {"ESCALATED", "PENDING_ACCEPTANCE", "PREPARING_BRIEF"}
     assert "mediator" in escalation.get("assignedRole", "mediator").lower()
 
     detail = assert_json_response(client.get(f"/escalations/{escalation_id}", headers=mediator_auth), 200)

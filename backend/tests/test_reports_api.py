@@ -81,11 +81,11 @@ def test_verifier_can_process_and_verify_report(client: TestClient) -> None:
 
     processed = assert_json_response(
         client.post(f"/reports/{created['reportId']}/process", headers=headers),
-        200,
+        202,
     )
-    assert processed["reportId"] == created["reportId"]
-    assert processed["status"] in {"PENDING_REVIEW", "VERIFIED", "NEEDS_MORE_INFO"}
-    assert processed["ai"]["needsHumanReview"] is True
+    assert processed["entityId"] == created["reportId"]
+    assert processed["status"] in {"PROCESSING", "PENDING_REVIEW", "VERIFIED", "NEEDS_MORE_INFO"}
+    assert processed["message"]
 
     verified = assert_json_response(
         client.post(

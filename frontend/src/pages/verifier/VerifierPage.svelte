@@ -97,6 +97,10 @@
     return report.status === 'NEW' || report.status === 'PROCESSING';
   }
 
+  function isEscalationPreparing(status: string | undefined): boolean {
+    return status === 'PREPARING_BRIEF';
+  }
+
   async function openReportModal(report: ReportItem): Promise<void> {
     const reportId = getReportId(report);
     selectedReportPreview = report;
@@ -182,15 +186,18 @@
     modalError = '';
     modalSuccess = '';
     try {
-      await escalateCluster(verifierToken, selectedId, {
+      const escalation = await escalateCluster(verifierToken, selectedId, {
         mediatorId: mediatorId.trim(),
         actionBrief: actionBrief.trim(),
         safetyNote: safetyNote.trim(),
         urgency,
         followUpDueAt: followUpDueAt.trim(),
       });
-      modalSuccess = m.modal_cluster_escalated();
+      modalSuccess = isEscalationPreparing(escalation.status)
+        ? 'Mediator brief is being prepared in the background.'
+        : m.modal_cluster_escalated();
       await loadVerifierQueue();
+      selectedClusterDetail = await getCluster(verifierToken, selectedId);
     } catch (error) {
       modalError = error instanceof Error ? error.message : m.modal_error_escalate();
     } finally {
@@ -205,9 +212,9 @@
     modalError = '';
     modalSuccess = '';
     try {
-      await processReport(verifierToken, selectedId);
+      const queued = await processReport(verifierToken, selectedId);
       selectedReportDetail = await getReport(verifierToken, selectedId);
-      modalSuccess = m.modal_ai_completed();
+      modalSuccess = queued.message;
       await loadVerifierQueue();
     } catch (error) {
       modalError = error instanceof Error ? error.message : m.modal_error_process_report();

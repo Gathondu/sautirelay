@@ -10,7 +10,7 @@ from backend.app.core.models import (
 )
 from backend.app.routers.dependencies import get_workflow_service, require_verifier
 from backend.app.services.workflow import WorkflowService
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from starlette import status
 
 router = APIRouter(prefix="/clusters", tags=["clusters"])
@@ -50,7 +50,10 @@ async def verify_cluster(
 async def escalate_cluster(
     clusterId: str,
     request: EscalationCreateRequest,
+    background_tasks: BackgroundTasks,
     workflow: Annotated[WorkflowService, Depends(get_workflow_service)],
     verifier: Annotated[AuthenticatedUser, Depends(require_verifier)],
 ) -> EscalationDocument:
-    return await workflow.escalate_cluster(clusterId, request, verifier)
+    escalation = await workflow.escalate_cluster(clusterId, request, verifier)
+    background_tasks.add_task(workflow.finalize_cluster_escalation_brief, escalation.id, clusterId, verifier.id)
+    return escalation

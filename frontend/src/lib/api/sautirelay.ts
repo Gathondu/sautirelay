@@ -58,6 +58,12 @@ export type ReportCreateResponse = {
   message: string;
 };
 
+export type QueuedOperationResponse = {
+  entityId: string;
+  status: string;
+  message: string;
+};
+
 export type ReporterStatusResponse = {
   trackingCode?: string;
   safeStatus?: string;
@@ -246,6 +252,10 @@ function normalizeClusterDetail(data: ClusterDetail): ClusterDetail {
 function normalizeEscalationItem(
   data: EscalationItem & {
     escalation_id?: string;
+    cluster_id?: string;
+    mediator_id?: string;
+    report_id?: string | null;
+    sent_at?: string;
     assigned_to?: string;
     action_brief?: string;
     safety_note?: string;
@@ -254,11 +264,46 @@ function normalizeEscalationItem(
   return {
     ...data,
     escalationId: data.escalationId ?? data.escalation_id ?? data.id ?? '',
+    clusterId: data.clusterId ?? data.cluster_id,
+    mediatorId: data.mediatorId ?? data.mediator_id,
+    reportId: data.reportId ?? data.report_id ?? null,
+    sentAt: data.sentAt ?? data.sent_at,
     assignedTo: data.assignedTo ?? data.assigned_to,
     actionBrief: data.actionBrief ?? data.action_brief,
     safetyNote: data.safetyNote ?? data.safety_note,
     urgency: data.urgency ?? 'ROUTINE',
     status: data.status ?? 'PENDING_ACCEPTANCE',
+  };
+}
+
+function normalizeEscalationDetail(
+  data: EscalationDetail & {
+    escalation_id?: string;
+    cluster_id?: string;
+    mediator_id?: string;
+    report_id?: string | null;
+    sent_at?: string;
+    assigned_to?: string;
+    action_brief?: string;
+    safety_note?: string;
+    approximate_area?: string;
+    recommended_actions?: unknown;
+    field_notes?: unknown;
+    mediator_organization_id?: string | null;
+    accepted_at?: string | null;
+    resolved_at?: string | null;
+    follow_up_due_at?: string | null;
+  },
+): EscalationDetail {
+  return {
+    ...normalizeEscalationItem(data),
+    approximateArea: data.approximateArea ?? data.approximate_area,
+    recommendedActions: asStringArray(data.recommendedActions ?? data.recommended_actions),
+    fieldNotes: asStringArray(data.fieldNotes ?? data.field_notes),
+    mediatorOrganizationId: data.mediatorOrganizationId ?? data.mediator_organization_id ?? null,
+    acceptedAt: data.acceptedAt ?? data.accepted_at ?? null,
+    resolvedAt: data.resolvedAt ?? data.resolved_at ?? null,
+    followUpDueAt: data.followUpDueAt ?? data.follow_up_due_at ?? null,
   };
 }
 
@@ -277,6 +322,14 @@ function normalizeDashboardMetrics(data: DashboardMetrics): DashboardMetrics {
 export type EscalationItem = {
   escalationId?: string;
   id?: string;
+  clusterId?: string;
+  cluster_id?: string;
+  mediatorId?: string;
+  mediator_id?: string;
+  reportId?: string | null;
+  report_id?: string | null;
+  sentAt?: string;
+  sent_at?: string;
   assignedTo?: string;
   assigned_to?: string;
   actionBrief?: string;
@@ -285,6 +338,23 @@ export type EscalationItem = {
   safety_note?: string;
   urgency: Urgency;
   status: string;
+};
+
+export type EscalationDetail = EscalationItem & {
+  approximateArea?: string;
+  approximate_area?: string;
+  recommendedActions?: string[];
+  recommended_actions?: string[];
+  fieldNotes?: string[];
+  field_notes?: string[];
+  mediatorOrganizationId?: string | null;
+  mediator_organization_id?: string | null;
+  acceptedAt?: string | null;
+  accepted_at?: string | null;
+  resolvedAt?: string | null;
+  resolved_at?: string | null;
+  followUpDueAt?: string | null;
+  follow_up_due_at?: string | null;
 };
 
 export type VerificationDecision =
@@ -443,8 +513,8 @@ export async function getReport(token: string, reportId: string): Promise<Report
   return normalizeReportDetail(data);
 }
 
-export function processReport(token: string, reportId: string): Promise<unknown> {
-  return request<unknown>(`/reports/${encodeURIComponent(reportId)}/process`, {
+export function processReport(token: string, reportId: string): Promise<QueuedOperationResponse> {
+  return request<QueuedOperationResponse>(`/reports/${encodeURIComponent(reportId)}/process`, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${token}`,
@@ -544,9 +614,41 @@ export async function acceptEscalation(token: string, escalationId: string): Pro
   return normalizeEscalationItem(
     data as EscalationItem & {
       escalation_id?: string;
+      cluster_id?: string;
+      mediator_id?: string;
+      report_id?: string | null;
+      sent_at?: string;
       assigned_to?: string;
       action_brief?: string;
       safety_note?: string;
+    },
+  );
+}
+
+export async function getEscalation(token: string, escalationId: string): Promise<EscalationDetail> {
+  const data = await request<EscalationDetail>(`/escalations/${encodeURIComponent(escalationId)}`, {
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+
+  return normalizeEscalationDetail(
+    data as EscalationDetail & {
+      escalation_id?: string;
+      cluster_id?: string;
+      mediator_id?: string;
+      report_id?: string | null;
+      sent_at?: string;
+      assigned_to?: string;
+      action_brief?: string;
+      safety_note?: string;
+      approximate_area?: string;
+      recommended_actions?: unknown;
+      field_notes?: unknown;
+      mediator_organization_id?: string | null;
+      accepted_at?: string | null;
+      resolved_at?: string | null;
+      follow_up_due_at?: string | null;
     },
   );
 }

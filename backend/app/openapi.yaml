@@ -171,17 +171,17 @@ paths:
   /reports/{reportId}/process:
     post:
       tags: [reports]
-      summary: Process a report with intake AI
+      summary: Queue report intake AI processing
       operationId: processReport
       parameters:
         - $ref: "#/components/parameters/ReportId"
       responses:
-        "200":
-          description: AI-assisted intake result.
+        "202":
+          description: AI intake was queued.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReportProcessResponse"
+                $ref: "#/components/schemas/QueuedOperationResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -860,6 +860,16 @@ components:
           type: array
           items:
             type: string
+    QueuedOperationResponse:
+      type: object
+      required: [entityId, status, message]
+      properties:
+        entityId:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
     VerificationDecision:
       type: string
       enum:
@@ -1015,6 +1025,7 @@ components:
       type: string
       enum:
         [
+          PREPARING_BRIEF,
           PENDING_ACCEPTANCE,
           ACCEPTED,
           ACTION_TAKEN,

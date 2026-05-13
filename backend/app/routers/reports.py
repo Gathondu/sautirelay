@@ -1,20 +1,19 @@
 from typing import Annotated
 
 from backend.app.core.models import (
-    AiApiResult,
     AuthenticatedUser,
     EscalationDocument,
+    QueuedOperationResponse,
     ReportCreateRequest,
     ReportCreateResponse,
     ReportDocument,
     ReportListResponse,
-    ReportProcessResponse,
     SafeStatusResponse,
     VerificationRequest,
 )
 from backend.app.routers.dependencies import get_workflow_service, require_verifier
 from backend.app.services.workflow import WorkflowService
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 
 router = APIRouter(tags=["reports"])
 
@@ -22,9 +21,12 @@ router = APIRouter(tags=["reports"])
 @router.post("/reports", response_model=ReportCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(
     request: ReportCreateRequest,
+    background_tasks: BackgroundTasks,
     workflow: Annotated[WorkflowService, Depends(get_workflow_service)],
 ) -> ReportCreateResponse:
-    return await workflow.submit_report(request)
+    report = await workflow.submit_report(request)
+    background_tasks.add_task(workflow.process_report_in_background, report.id, None)
+    return workflow.build_report_create_response(report)
 
 
 @router.get("/reports/status/{trackingCode}", response_model=SafeStatusResponse)
@@ -55,32 +57,30 @@ async def get_report(
     return await workflow.get_report(reportId)
 
 
-@router.post("/reports/{reportId}/process", response_model=ReportProcessResponse)
+@router.post(
+    "/reports/{reportId}/process",
+    response_model=QueuedOperationResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def process_report(
     reportId: str,
+    background_tasks: BackgroundTasks,
     workflow: Annotated[WorkflowService, Depends(get_workflow_service)],
     verifier: Annotated[AuthenticatedUser, Depends(require_verifier)],
-) -> ReportProcessResponse:
-    report = await workflow.process_report(reportId, verifier)
-    default_warnings = report.ai_safety_warnings if report.ai_safety_warnings else ["Do not disclose reporter details."]
-    ai = AiApiResult(
-        category=report.category,
-        risk_level=report.risk_level,
-        urgency=report.urgency,
-        summary=report.summary or "",
-        redacted_text=report.redacted_text or "",
-        translated_text=report.translated_text or "",
-        recommended_mediator_action=report.ai_recommended_mediator_action
-        or "Review with trusted local mediators before any public action.",
-        confidence=report.confidence_score,
-        needs_human_review=report.needs_human_review if report.needs_human_review is not None else True,
-        safety_warnings=default_warnings,
-    )
-    return ReportProcessResponse(
-        report_id=report.id,
+) -> QueuedOperationResponse:
+    report = await workflow.get_report(reportId)
+    if report.status in {"NEW", "PROCESSING"}:
+        background_tasks.add_task(workflow.process_report_in_background, report.id, verifier.id)
+        return QueuedOperationResponse(
+            entity_id=report.id,
+            status="PROCESSING",
+            message="AI intake has started in the background.",
+        )
+
+    return QueuedOperationResponse(
+        entity_id=report.id,
         status=report.status,
-        ai=ai,
-        cluster_ids=[report.cluster_id] if report.cluster_id is not None else [],
+        message=f"Report is already {report.status}.",
     )
 
 
@@ -88,7 +88,16 @@ async def process_report(
 async def verify_report(
     reportId: str,
     request: VerificationRequest,
+    background_tasks: BackgroundTasks,
     workflow: Annotated[WorkflowService, Depends(get_workflow_service)],
     verifier: Annotated[AuthenticatedUser, Depends(require_verifier)],
 ) -> ReportDocument | EscalationDocument:
-    return await workflow.verify_report(reportId, request, verifier)
+    result = await workflow.verify_report(reportId, request, verifier)
+    if isinstance(result, EscalationDocument) and result.status == "PREPARING_BRIEF" and result.report_id:
+        background_tasks.add_task(
+            workflow.finalize_report_escalation_brief,
+            result.id,
+            result.report_id,
+            verifier.id,
+        )
+    return result

@@ -59,6 +59,7 @@ class ClusterStatus(StrEnum):
 
 
 class EscalationStatus(StrEnum):
+    preparing_brief = "PREPARING_BRIEF"
     pending_acceptance = "PENDING_ACCEPTANCE"
     accepted = "ACCEPTED"
     action_recorded = "ACTION_RECORDED"
@@ -309,6 +310,14 @@ class ReportProcessResponse(ApiModel):
     status: ReportStatus
     ai: AiApiResult
     cluster_ids: list[str] = Field(default_factory=list)
+
+
+class QueuedOperationResponse(ApiModel):
+    entity_id: str = Field(
+        validation_alias=AliasChoices("entity_id", "entityId", "report_id", "reportId", "escalation_id", "escalationId")
+    )
+    status: str
+    message: str
 
 
 class ClusterListResponse(ApiModel):
