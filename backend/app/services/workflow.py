@@ -27,7 +27,10 @@ from backend.app.core.models import (
     utc_now,
 )
 from backend.app.repositories.memory import SautiRelayRepository
-from backend.app.services.clustering import DEFAULT_SIMILARITY_THRESHOLD, cosine_similarity
+from backend.app.services.clustering import (
+    DEFAULT_SIMILARITY_THRESHOLD,
+    cosine_similarity,
+)
 from backend.app.services.intake_mapping import openai_intake_to_report_updates
 from backend.app.services.openai_intake import OpenAIIntakeService
 from fastapi import HTTPException, status
@@ -39,27 +42,29 @@ class WorkflowService:
 
     async def submit_report(self, request: ReportCreateRequest) -> ReportCreateResponse:
         now = utc_now()
-        report = ReportDocument(
-            reportId=self._id("report"),
-            trackingCode=self._tracking_code(),
-            submitted_at=now,
-            channel=request.channel,
-            language=request.language,
-            raw_text_encrypted=self._local_encrypted_placeholder(request.text),
-            redacted_text=None,
-            translated_text=None,
-            summary=None,
-            approximate_location=request.location,
-            raw_location_encrypted=self._local_encrypted_placeholder(request.location.model_dump_json()),
-            location_precision=request.location.location_precision,
-            category=request.category_hint,
-            urgency=request.timeframe,
-            risk_level=RiskLevel.high if request.immediate_danger else RiskLevel.medium,
-            confidence_score=0.0,
-            reporter_anonymous=True,
-            status=ReportStatus.new,
-            created_at=now,
-            updated_at=now,
+        report = ReportDocument.model_validate(
+            {
+                "report_id": self._id("report"),
+                "tracking_code": self._tracking_code(),
+                "submitted_at": now,
+                "channel": request.channel,
+                "language": request.language,
+                "raw_text_encrypted": self._local_encrypted_placeholder(request.text),
+                "redacted_text": None,
+                "translated_text": None,
+                "summary": None,
+                "approximate_location": request.location,
+                "raw_location_encrypted": self._local_encrypted_placeholder(request.location.model_dump_json()),
+                "location_precision": request.location.location_precision,
+                "category": request.category_hint,
+                "urgency": request.timeframe,
+                "risk_level": RiskLevel.high if request.immediate_danger else RiskLevel.medium,
+                "confidence_score": 0.0,
+                "reporter_anonymous": True,
+                "status": ReportStatus.new,
+                "created_at": now,
+                "updated_at": now,
+            }
         )
         await self._repository.put_report(report)
         await self._audit(None, "report.submitted", "report", report.id)
@@ -70,12 +75,14 @@ class WorkflowService:
                 report.model_copy(update={"status": ReportStatus.new, "updated_at": utc_now()})
             )
             raise
-        return ReportCreateResponse(
-            report_id=report.id,
-            tracking_code=report.public_tracking_code,
-            status=report.status,
-            safe_status=self._safe_status(report.status),
-            message="Your report has been received safely.",
+        return ReportCreateResponse.model_validate(
+            {
+                "report_id": report.id,
+                "tracking_code": report.public_tracking_code,
+                "status": report.status,
+                "safe_status": self._safe_status(report.status),
+                "message": "Your report has been received safely.",
+            }
         )
 
     async def get_safe_status(self, tracking_code: str) -> SafeStatusResponse:
@@ -146,18 +153,20 @@ class WorkflowService:
         actor: AuthenticatedUser,
     ) -> ReportDocument | EscalationDocument:
         report = await self._require_report(report_id)
-        verification = VerificationDocument(
-            id=self._id("verification"),
-            report_id=report.id,
-            cluster_id=None,
-            verifier_id=actor.id,
-            decision=request.decision,
-            notes=request.notes,
-            confidence=self._confidence_value(request.confidence),
-            adjusted_category=request.adjusted_category,
-            adjusted_risk_level=request.adjusted_risk_level,
-            adjusted_location=request.adjusted_location,
-            created_at=utc_now(),
+        verification = VerificationDocument.model_validate(
+            {
+                "id": self._id("verification"),
+                "report_id": report.id,
+                "cluster_id": None,
+                "verifier_id": actor.id,
+                "decision": request.decision,
+                "notes": request.notes,
+                "confidence": self._confidence_value(request.confidence),
+                "adjusted_category": request.adjusted_category,
+                "adjusted_risk_level": request.adjusted_risk_level,
+                "adjusted_location": request.adjusted_location,
+                "created_at": utc_now(),
+            }
         )
         await self._repository.put_verification(verification)
         updated_report = self._apply_report_verification(report, request)
@@ -184,18 +193,20 @@ class WorkflowService:
         actor: AuthenticatedUser,
     ) -> SignalClusterDocument:
         cluster = await self.get_cluster(cluster_id)
-        verification = VerificationDocument(
-            id=self._id("verification"),
-            report_id=None,
-            cluster_id=cluster.id,
-            verifier_id=actor.id,
-            decision=request.decision,
-            notes=request.notes,
-            confidence=self._confidence_value(request.confidence),
-            adjusted_category=request.adjusted_category,
-            adjusted_risk_level=request.adjusted_risk_level,
-            adjusted_location=request.adjusted_location,
-            created_at=utc_now(),
+        verification = VerificationDocument.model_validate(
+            {
+                "id": self._id("verification"),
+                "report_id": None,
+                "cluster_id": cluster.id,
+                "verifier_id": actor.id,
+                "decision": request.decision,
+                "notes": request.notes,
+                "confidence": self._confidence_value(request.confidence),
+                "adjusted_category": request.adjusted_category,
+                "adjusted_risk_level": request.adjusted_risk_level,
+                "adjusted_location": request.adjusted_location,
+                "created_at": utc_now(),
+            }
         )
         await self._repository.put_verification(verification)
         status_by_decision = {
@@ -267,15 +278,17 @@ class WorkflowService:
     ) -> OutcomeDocument:
         escalation = await self.get_escalation(escalation_id, actor)
         now = utc_now()
-        outcome = OutcomeDocument(
-            outcomeId=self._id("outcome"),
-            escalation_id=escalation.id,
-            outcome_type=request.outcome_type,
-            notes=request.notes,
-            deescalated=request.deescalated,
-            follow_up_required=request.follow_up_required,
-            recorded_by=actor.id,
-            created_at=now,
+        outcome = OutcomeDocument.model_validate(
+            {
+                "outcome_id": self._id("outcome"),
+                "escalation_id": escalation.id,
+                "outcome_type": request.outcome_type,
+                "notes": request.notes,
+                "deescalated": request.deescalated,
+                "follow_up_required": request.follow_up_required,
+                "recorded_by": actor.id,
+                "created_at": now,
+            }
         )
         next_status = EscalationStatus.follow_up_requested if request.follow_up_required else EscalationStatus.resolved
         resolved_at = None if request.follow_up_required else now
@@ -399,21 +412,23 @@ class WorkflowService:
             await self._repository.put_cluster(updated_cluster)
             await self._repository.put_report(report.model_copy(update={"cluster_id": cluster.id, "updated_at": now}))
             return
-        cluster = SignalClusterDocument(
-            clusterId=self._id("cluster"),
-            title=f"Possible {str(report.category).replace('_', ' ').title()}",
-            category=report.category,
-            region=region,
-            risk_level=report.risk_level,
-            summary=f"One SautiRelay report in {region}. Human verification is recommended.",
-            report_count=1,
-            report_ids=[report.id],
-            first_seen_at=report.submitted_at,
-            last_seen_at=now,
-            confidence_score=report.confidence_score,
-            status=ClusterStatus.pending_review,
-            created_at=now,
-            updated_at=now,
+        cluster = SignalClusterDocument.model_validate(
+            {
+                "cluster_id": self._id("cluster"),
+                "title": f"Possible {str(report.category).replace('_', ' ').title()}",
+                "category": report.category,
+                "region": region,
+                "risk_level": report.risk_level,
+                "summary": f"One SautiRelay report in {region}. Human verification is recommended.",
+                "report_count": 1,
+                "report_ids": [report.id],
+                "first_seen_at": report.submitted_at,
+                "last_seen_at": now,
+                "confidence_score": report.confidence_score,
+                "status": ClusterStatus.pending_review,
+                "created_at": now,
+                "updated_at": now,
+            }
         )
         await self._repository.put_cluster(cluster)
         await self._repository.put_report(report.model_copy(update={"cluster_id": cluster.id, "updated_at": now}))
@@ -516,20 +531,22 @@ class WorkflowService:
             f"Suggested response:\n{recommended}\n\n"
             f"Follow-up: {ai_brief.follow_up_prompt}"
         )
-        return EscalationDocument(
-            escalationId=self._id("escalation"),
-            cluster_id=cluster.id if cluster is not None else None,
-            report_id=report.id if report is not None else None,
-            assigned_to=request.assigned_to,
-            assigned_organization=request.assigned_organization,
-            action_brief=brief,
-            safety_note=self._safe_mediator_note(request.safety_note),
-            urgency=request.urgency,
-            status=EscalationStatus.pending_acceptance,
-            sent_at=now,
-            follow_up_due_at=request.follow_up_due_at,
-            created_at=now,
-            updated_at=now,
+        return EscalationDocument.model_validate(
+            {
+                "escalation_id": self._id("escalation"),
+                "cluster_id": cluster.id if cluster is not None else None,
+                "report_id": report.id if report is not None else None,
+                "assigned_to": request.assigned_to,
+                "assigned_organization": request.assigned_organization,
+                "action_brief": brief,
+                "safety_note": self._safe_mediator_note(request.safety_note),
+                "urgency": request.urgency,
+                "status": EscalationStatus.pending_acceptance,
+                "sent_at": now,
+                "follow_up_due_at": request.follow_up_due_at,
+                "created_at": now,
+                "updated_at": now,
+            }
         )
 
     async def _mark_related_reports_resolved(self, escalation: EscalationDocument) -> None:
@@ -607,14 +624,16 @@ class WorkflowService:
         metadata: dict[str, str] | None = None,
     ) -> None:
         await self._repository.append_audit_log(
-            AuditLogDocument(
-                id=self._id("audit"),
-                actor_id=actor_id,
-                action=action,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                metadata=metadata or {},
-                created_at=utc_now(),
+            AuditLogDocument.model_validate(
+                {
+                    "id": self._id("audit"),
+                    "actor_id": actor_id,
+                    "action": action,
+                    "entity_type": entity_type,
+                    "entity_id": entity_id,
+                    "metadata": metadata or {},
+                    "created_at": utc_now(),
+                }
             )
         )
 
