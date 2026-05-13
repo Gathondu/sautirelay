@@ -118,6 +118,7 @@ class OpenAIIntakeService:
     ) -> None:
         settings = get_settings()
         self.model = model or settings.openai_model or DEFAULT_INTAKE_MODEL
+        self.max_output_tokens = settings.openai_max_output_tokens
         self.api_key = api_key if api_key is not None else settings.openai_api_key
         self.base_url = base_url if base_url is not None else settings.openai_base_url
         self.client = client
@@ -132,25 +133,50 @@ class OpenAIIntakeService:
         category_hint: str | None = None,
         urgency_hint: str | None = None,
     ) -> IntakeResult:
-        if self.api_key or self.client is not None:
-            try:
-                parsed = self._process_with_openai(
+        settings = get_settings()
+        allow_fallback = settings.ai_allow_deterministic_fallback or settings.environment == "test"
+        use_provider = bool(self.api_key) or self.client is not None
+
+        if settings.environment == "test" and self.client is None:
+            return self._fallback_process_report(
+                text=text,
+                language=language,
+                location=location,
+                category_hint=category_hint,
+                urgency_hint=urgency_hint,
+            )
+
+        if not use_provider:
+            if allow_fallback:
+                return self._fallback_process_report(
                     text=text,
                     language=language,
                     location=location,
                     category_hint=category_hint,
                     urgency_hint=urgency_hint,
                 )
-                return self._result_from_structured(parsed, text=text, provider="openai")
-            except Exception:
-                pass
-        return self._fallback_process_report(
-            text=text,
-            language=language,
-            location=location,
-            category_hint=category_hint,
-            urgency_hint=urgency_hint,
-        )
+            msg = "OPENAI_API_KEY is required for AI intake."
+            raise RuntimeError(msg)
+
+        try:
+            parsed = self._process_with_openai(
+                text=text,
+                language=language,
+                location=location,
+                category_hint=category_hint,
+                urgency_hint=urgency_hint,
+            )
+            return self._result_from_structured(parsed, text=text, provider="openai")
+        except Exception as exc:
+            if allow_fallback:
+                return self._fallback_process_report(
+                    text=text,
+                    language=language,
+                    location=location,
+                    category_hint=category_hint,
+                    urgency_hint=urgency_hint,
+                )
+            raise RuntimeError(f"OpenAI intake failed: {exc}") from exc
 
     def generate_mediator_brief(
         self,
@@ -159,13 +185,25 @@ class OpenAIIntakeService:
         reports: list[object] | None = None,
         safety_note: str | None = None,
     ) -> MediatorBrief:
-        if self.api_key or self.client is not None:
-            try:
-                parsed = self._brief_with_openai(signal=signal, reports=reports or [], safety_note=safety_note)
-                return self._brief_from_structured(parsed, provider="openai")
-            except Exception:
-                pass
-        return self._fallback_mediator_brief(signal=signal, reports=reports or [], safety_note=safety_note)
+        settings = get_settings()
+        allow_fallback = settings.ai_allow_deterministic_fallback or settings.environment == "test"
+        use_provider = bool(self.api_key) or self.client is not None
+
+        if settings.environment == "test" and self.client is None:
+            return self._fallback_mediator_brief(signal=signal, reports=reports or [], safety_note=safety_note)
+
+        if not use_provider:
+            if allow_fallback:
+                return self._fallback_mediator_brief(signal=signal, reports=reports or [], safety_note=safety_note)
+            raise RuntimeError("OPENAI_API_KEY is required for mediator brief generation.")
+
+        try:
+            parsed = self._brief_with_openai(signal=signal, reports=reports or [], safety_note=safety_note)
+            return self._brief_from_structured(parsed, provider="openai")
+        except Exception as exc:
+            if allow_fallback:
+                return self._fallback_mediator_brief(signal=signal, reports=reports or [], safety_note=safety_note)
+            raise RuntimeError(f"OpenAI mediator brief failed: {exc}") from exc
 
     def _process_with_openai(
         self,
@@ -180,6 +218,7 @@ class OpenAIIntakeService:
         location_view = safe_location_view(location, visibility="mediator")
         response = client.responses.parse(
             model=self.model,
+            max_output_tokens=self.max_output_tokens,
             input=[
                 {
                     "role": "system",
@@ -218,6 +257,7 @@ class OpenAIIntakeService:
             client = _create_openai_client(api_key=self.api_key, base_url=self.base_url)
         response = client.responses.parse(
             model=self.model,
+            max_output_tokens=self.max_output_tokens,
             input=[
                 {"role": "system", "content": _MEDIATOR_BRIEF_SYSTEM_PROMPT},
                 {

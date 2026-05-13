@@ -30,6 +30,11 @@ def deterministic_local_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("JWT_SECRET", "test-only-secret")
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
     monkeypatch.setenv("EMBEDDING_MODEL", "test-embedding-model")
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("EMBEDDING_DIMENSIONS", raising=False)
+    monkeypatch.delenv("EMBEDDING_INPUT_TYPE", raising=False)
+    monkeypatch.delenv("EMBEDDING_EXTRA_BODY", raising=False)
+    monkeypatch.delenv("EMBEDDING_EXTRA_HEADERS", raising=False)
     monkeypatch.setenv(
         "CORS_ALLOW_ORIGINS",
         "http://localhost:5173,http://127.0.0.1:5173",

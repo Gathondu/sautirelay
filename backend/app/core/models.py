@@ -248,6 +248,10 @@ class ReportDocument(ApiModel):
     consent_version: str = "2026-05-local"
     status: ReportStatus = ReportStatus.new
     cluster_id: str | None = None
+    embedding: list[float] | None = Field(default=None, exclude=True)
+    ai_recommended_mediator_action: str | None = None
+    ai_safety_warnings: list[str] = Field(default_factory=list)
+    needs_human_review: bool | None = None
     created_at: datetime
     updated_at: datetime
 

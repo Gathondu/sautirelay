@@ -28,7 +28,7 @@ test.describe.serial('SautiRelay integrated frontend workflow', () => {
     await page.goto('/status');
     await page.getByPlaceholder('SR-8K42P').fill(trackingCode);
     await page.getByRole('button', { name: 'Check status' }).click();
-    await expect(page.getByRole('status')).toContainText('Received');
+    await expect(page.getByRole('status')).toContainText('Under review');
   });
 
   test('loads verifier, mediator, and analytics dashboards through the API', async ({ page }) => {
@@ -40,8 +40,8 @@ test.describe.serial('SautiRelay integrated frontend workflow', () => {
       page.waitForResponse((response) => response.url().endsWith('/clusters') && response.status() === 200),
       page.getByRole('button', { name: 'Load seeded queue' }).click(),
     ]);
-    await expect(page.getByLabel('Verifier queue')).toContainText('NOT_SURE');
-    await expect(page.getByLabel('Verifier queue')).toContainText('Report awaiting AI processing.');
+    await expect(page.getByLabel('Verifier queue')).toContainText('WATER_OR_RESOURCE_CONFLICT');
+    await expect(page.getByLabel('Verifier queue')).toContainText('[RESOURCE_POINT]');
 
     await page.goto('/analytics', { waitUntil: 'networkidle' });
     await Promise.all([

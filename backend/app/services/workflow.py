@@ -1,7 +1,7 @@
-import re
 import secrets
 from uuid import uuid4
 
+from backend.app.core.config import get_settings
 from backend.app.core.models import (
     ApproximateLocation,
     AuditLogDocument,
@@ -11,7 +11,6 @@ from backend.app.core.models import (
     EscalationCreateRequest,
     EscalationDocument,
     EscalationStatus,
-    IntakeResult,
     OutcomeCreateRequest,
     OutcomeDocument,
     ReportCategory,
@@ -22,13 +21,15 @@ from backend.app.core.models import (
     RiskLevel,
     SafeStatusResponse,
     SignalClusterDocument,
-    Urgency,
     VerificationDecision,
     VerificationDocument,
     VerificationRequest,
     utc_now,
 )
 from backend.app.repositories.memory import SautiRelayRepository
+from backend.app.services.clustering import DEFAULT_SIMILARITY_THRESHOLD, cosine_similarity
+from backend.app.services.intake_mapping import openai_intake_to_report_updates
+from backend.app.services.openai_intake import OpenAIIntakeService
 from fastapi import HTTPException, status
 
 
@@ -61,9 +62,14 @@ class WorkflowService:
             updated_at=now,
         )
         await self._repository.put_report(report)
-        await self._attach_to_cluster(report)
-        report = await self._require_report(report.id)
         await self._audit(None, "report.submitted", "report", report.id)
+        try:
+            report = await self._process_report_with_ai(report.id, actor_id=None)
+        except HTTPException:
+            await self._repository.put_report(
+                report.model_copy(update={"status": ReportStatus.new, "updated_at": utc_now()})
+            )
+            raise
         return ReportCreateResponse(
             report_id=report.id,
             tracking_code=report.public_tracking_code,
@@ -85,27 +91,52 @@ class WorkflowService:
         return await self._require_report(report_id)
 
     async def process_report(self, report_id: str, actor: AuthenticatedUser) -> ReportDocument:
+        report = await self._process_report_with_ai(report_id, actor_id=actor.id)
+        await self._audit(actor.id, "report.processed", "report", report_id)
+        return report
+
+    async def _process_report_with_ai(self, report_id: str, actor_id: str | None) -> ReportDocument:
+        settings = get_settings()
+        if settings.environment != "test" and not settings.openai_api_key:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI intake is not configured (set OPENAI_API_KEY).",
+            )
+
         report = await self._require_report(report_id)
         now = utc_now()
         processing_report = report.model_copy(update={"status": ReportStatus.processing, "updated_at": now})
         await self._repository.put_report(processing_report)
-        intake = self._fallback_intake(processing_report)
+
+        raw_text = self._restore_local_placeholder(processing_report.raw_text_encrypted)
+        intake_service = OpenAIIntakeService()
+        try:
+            openai_result = intake_service.process_report(
+                text=raw_text,
+                language=processing_report.language,
+                location=processing_report.approximate_location,
+                category_hint=str(processing_report.category) if processing_report.category is not None else None,
+                urgency_hint=str(processing_report.urgency) if processing_report.urgency is not None else None,
+            )
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
+
+        updates = openai_intake_to_report_updates(openai_result)
         updated_report = processing_report.model_copy(
             update={
-                "redacted_text": intake.redacted_text,
-                "translated_text": intake.translated_text,
-                "summary": intake.summary,
-                "category": intake.category,
-                "urgency": intake.urgency,
-                "risk_level": intake.risk_level,
-                "confidence_score": intake.confidence_score,
+                **updates,
                 "status": ReportStatus.pending_review,
                 "updated_at": utc_now(),
             }
         )
         await self._repository.put_report(updated_report)
-        await self._attach_to_cluster(updated_report)
-        await self._audit(actor.id, "report.processed", "report", report_id)
+        await self._detach_report_from_clusters(report_id)
+        reloaded = await self._require_report(report_id)
+        await self._attach_to_cluster(reloaded)
+        await self._audit(actor_id, "report.ai_processed", "report", report_id)
         return await self._require_report(report_id)
 
     async def verify_report(
@@ -272,8 +303,76 @@ class WorkflowService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Escalation not found")
         return escalation
 
+    async def _detach_report_from_clusters(self, report_id: str) -> None:
+        for cluster in await self._repository.list_clusters():
+            if report_id not in cluster.report_ids:
+                continue
+            new_ids = [rid for rid in cluster.report_ids if rid != report_id]
+            if not new_ids:
+                await self._repository.delete_cluster(cluster.id)
+            else:
+                await self._repository.put_cluster(
+                    cluster.model_copy(
+                        update={
+                            "report_ids": new_ids,
+                            "report_count": len(new_ids),
+                            "updated_at": utc_now(),
+                        }
+                    )
+                )
+
     async def _attach_to_cluster(self, report: ReportDocument) -> None:
         region = self._region_from_location(report.approximate_location)
+        now = utc_now()
+        embedding = report.embedding or []
+        all_reports = await self._repository.list_reports()
+
+        if embedding and len(embedding) > 0:
+            best_cluster_id: str | None = None
+            best_similarity = 0.0
+            for other in all_reports:
+                if other.id == report.id:
+                    continue
+                other_vec = other.embedding or []
+                if not other_vec or len(other_vec) != len(embedding):
+                    continue
+                if str(other.category) != str(report.category):
+                    continue
+                if self._region_from_location(other.approximate_location) != region:
+                    continue
+                sim = cosine_similarity(embedding, other_vec)
+                if sim >= DEFAULT_SIMILARITY_THRESHOLD and sim > best_similarity and other.cluster_id:
+                    best_similarity = sim
+                    best_cluster_id = other.cluster_id
+
+            if best_cluster_id:
+                cluster = await self._repository.get_cluster(best_cluster_id)
+                if cluster is not None and cluster.status in {
+                    ClusterStatus.new,
+                    ClusterStatus.pending_review,
+                    ClusterStatus.verified,
+                }:
+                    report_ids = list(dict.fromkeys([*cluster.report_ids, report.id]))
+                    updated_cluster = cluster.model_copy(
+                        update={
+                            "report_ids": report_ids,
+                            "report_count": len(report_ids),
+                            "last_seen_at": now,
+                            "risk_level": self._max_risk(cluster.risk_level, report.risk_level),
+                            "summary": (
+                                f"{len(report_ids)} related SautiRelay reports in {region}. "
+                                "Human verification is recommended."
+                            ),
+                            "confidence_score": max(cluster.confidence_score, report.confidence_score),
+                            "updated_at": now,
+                        }
+                    )
+                    await self._repository.put_cluster(updated_cluster)
+                    await self._repository.put_report(
+                        report.model_copy(update={"cluster_id": cluster.id, "updated_at": now})
+                    )
+                    return
+
         clusters = await self._repository.list_clusters()
         matching = [
             cluster
@@ -282,7 +381,6 @@ class WorkflowService:
             and cluster.region == region
             and cluster.status in {ClusterStatus.new, ClusterStatus.pending_review, ClusterStatus.verified}
         ]
-        now = utc_now()
         if matching:
             cluster = matching[0]
             report_ids = list(dict.fromkeys([*cluster.report_ids, report.id]))
@@ -389,13 +487,34 @@ class WorkflowService:
             if report is not None
             else ReportCategory.not_sure
         )
+        try:
+            ai_brief = OpenAIIntakeService().generate_mediator_brief(
+                signal={
+                    "category": category,
+                    "risk_level": risk,
+                    "summary": source_summary,
+                    "area": area,
+                    "urgency": request.urgency,
+                },
+                reports=[report] if report is not None else [],
+                safety_note=request.safety_note,
+            )
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+        recommended_items = ai_brief.recommended_response or [
+            "Coordinate with trusted local peace actors.",
+            "Record outcome and follow-up needs.",
+        ]
+        recommended = "\n".join(f"- {item}" for item in recommended_items)
         brief = (
-            "SautiRelay mediator brief\n\n"
-            f"Risk: {str(risk)}\n"
-            f"Issue: {str(category)}\n"
-            f"Area: {area}\n\n"
-            f"Summary: {source_summary}\n\n"
-            "Suggested response: Verify safely with trusted local peace actors and avoid public accusation."
+            f"{ai_brief.title}\n\n"
+            f"Risk: {ai_brief.risk_level}\n"
+            f"Issue: {ai_brief.risk_type}\n"
+            f"Area: {ai_brief.area}\n\n"
+            f"Summary: {ai_brief.summary}\n\n"
+            f"Suggested response:\n{recommended}\n\n"
+            f"Follow-up: {ai_brief.follow_up_prompt}"
         )
         return EscalationDocument(
             escalationId=self._id("escalation"),
@@ -432,68 +551,6 @@ class WorkflowService:
                         await self._repository.put_report(
                             report.model_copy(update={"status": ReportStatus.resolved, "updated_at": utc_now()})
                         )
-
-    def _fallback_intake(self, report: ReportDocument) -> IntakeResult:
-        raw_text = self._restore_local_placeholder(report.raw_text_encrypted)
-        redacted = self._redact(raw_text)
-        category = self._category_from_text(raw_text, report.category)
-        urgency = self._urgency_from_text(raw_text, report.urgency)
-        risk = self._risk_from_text(raw_text, urgency)
-        summary = redacted[:240]
-        return IntakeResult(
-            category=category,
-            urgency=urgency,
-            risk_level=risk,
-            confidence_score=0.64,
-            redacted_text=redacted,
-            translated_text=redacted,
-            summary=summary,
-            recommended_mediator_action="Review with trusted local mediators before any public action.",
-            safety_warning="Do not disclose reporter details.",
-            embedding=[],
-        )
-
-    @staticmethod
-    def _redact(text: str) -> str:
-        redacted = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[EMAIL]", text)
-        redacted = re.sub(r"\+?\d[\d\s().-]{7,}\d", "[PHONE]", redacted)
-        redacted = re.sub(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}\b", "[PERSON]", redacted)
-        return redacted
-
-    @staticmethod
-    def _category_from_text(text: str, fallback: ReportCategory) -> ReportCategory:
-        lowered = text.lower()
-        if "water" in lowered or "borehole" in lowered or "herder" in lowered:
-            return ReportCategory.water_or_resource_conflict
-        if "aid" in lowered or "distribution" in lowered:
-            return ReportCategory.aid_diversion
-        if "election" in lowered or "poll" in lowered:
-            return ReportCategory.election_intimidation
-        if "hate" in lowered or "chased away" in lowered:
-            return ReportCategory.hate_speech_or_incitement
-        if "displacement" in lowered or "families are leaving" in lowered:
-            return ReportCategory.displacement_risk
-        return fallback
-
-    @staticmethod
-    def _urgency_from_text(text: str, fallback: Urgency) -> Urgency:
-        lowered = text.lower()
-        if "now" in lowered or "immediate" in lowered:
-            return Urgency.now
-        if "tomorrow" in lowered or "24 hour" in lowered:
-            return Urgency.within_24_hours
-        if "today" in lowered:
-            return Urgency.today
-        return fallback
-
-    @staticmethod
-    def _risk_from_text(text: str, urgency: Urgency) -> RiskLevel:
-        lowered = text.lower()
-        if "attack" in lowered or "armed" in lowered or urgency in {Urgency.now, Urgency.within_24_hours}:
-            return RiskLevel.high
-        if "rumor" in lowered or "blocked" in lowered:
-            return RiskLevel.medium
-        return RiskLevel.low
 
     @staticmethod
     def _confidence_value(confidence: float | str | None) -> float | None:

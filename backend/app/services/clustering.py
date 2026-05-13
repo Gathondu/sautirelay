@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from backend.app.core.config import get_settings
+from fastapi import HTTPException, status
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_VECTOR_DIMENSIONS = 96
@@ -71,39 +72,89 @@ class EmbeddingService:
         self.extra_headers = extra_headers if extra_headers is not None else settings.embedding_extra_headers
 
     def embed_text(self, text: str | None) -> list[float]:
+        settings = get_settings()
         body = (text or "").strip()
-        if self.api_key and body:
-            try:
-                from openai import OpenAI
+        allow_fallback = settings.ai_allow_deterministic_fallback or settings.environment == "test"
 
-                if self.base_url:
-                    client = OpenAI(api_key=self.api_key, base_url=self.base_url)
-                else:
-                    client = OpenAI(api_key=self.api_key)
-                request_kwargs: Mapping[str, Any] = {
-                    "input": body.replace("\n", " "),
-                    "model": self.model,
-                }
-                open_ai_model = self.model.startswith("text-embedding") or self.model.startswith("openai/")
-                if self.dimensions is not None:
-                    request_kwargs["dimensions"] = self.dimensions
+        if settings.environment == "test" and self.model.startswith("test-"):
+            return deterministic_embedding(body, dimensions=self.local_dimensions)
 
-                extra_body = dict(self.extra_body)
-                if self.input_type:
-                    extra_body["input_type"] = self.input_type
-                if extra_body:
-                    request_kwargs["extra_body"] = extra_body
-                if self.extra_headers:
-                    request_kwargs["extra_headers"] = self.extra_headers
-                if not open_ai_model:
-                    request_kwargs["encoding_format"] = "float"
-                    request_kwargs["check_embedding_ctx_length"] = False
+        if settings.environment == "test":
+            if self.api_key and body:
+                try:
+                    from openai import OpenAI
 
-                response = client.embeddings.create(**request_kwargs)
-                return _normalize(response.data[0].embedding)
-            except Exception:
+                    if self.base_url:
+                        client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+                    else:
+                        client = OpenAI(api_key=self.api_key)
+                    request_kwargs: Mapping[str, Any] = {
+                        "input": body.replace("\n", " "),
+                        "model": self.model,
+                    }
+                    open_ai_model = self.model.startswith("text-embedding") or self.model.startswith("openai/")
+                    if self.dimensions is not None:
+                        request_kwargs["dimensions"] = self.dimensions
+
+                    extra_body = dict(self.extra_body)
+                    if self.input_type:
+                        extra_body["input_type"] = self.input_type
+                    if extra_body:
+                        request_kwargs["extra_body"] = extra_body
+                    if self.extra_headers:
+                        request_kwargs["extra_headers"] = self.extra_headers
+                    if not open_ai_model:
+                        request_kwargs["encoding_format"] = "float"
+                        request_kwargs["check_embedding_ctx_length"] = False
+
+                    response = client.embeddings.create(**request_kwargs)
+                    return _normalize(response.data[0].embedding)
+                except Exception:
+                    return deterministic_embedding(body, dimensions=self.local_dimensions)
+            return deterministic_embedding(body, dimensions=self.local_dimensions)
+
+        if not self.api_key:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI intake is not configured (set OPENAI_API_KEY).",
+            )
+
+        if not body:
+            dims = self.dimensions or DEFAULT_VECTOR_DIMENSIONS
+            return [0.0 for _ in range(dims)]
+
+        try:
+            from openai import OpenAI
+
+            if self.base_url:
+                client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+            else:
+                client = OpenAI(api_key=self.api_key)
+            request_kwargs = {
+                "input": body.replace("\n", " "),
+                "model": self.model,
+            }
+            open_ai_model = self.model.startswith("text-embedding") or self.model.startswith("openai/")
+            if self.dimensions is not None:
+                request_kwargs["dimensions"] = self.dimensions
+
+            extra_body = dict(self.extra_body)
+            if self.input_type:
+                extra_body["input_type"] = self.input_type
+            if extra_body:
+                request_kwargs["extra_body"] = extra_body
+            if self.extra_headers:
+                request_kwargs["extra_headers"] = self.extra_headers
+            if not open_ai_model:
+                request_kwargs["encoding_format"] = "float"
+                request_kwargs["check_embedding_ctx_length"] = False
+
+            response = client.embeddings.create(**request_kwargs)
+            return _normalize(response.data[0].embedding)
+        except Exception as exc:
+            if allow_fallback:
                 return deterministic_embedding(body, dimensions=self.local_dimensions)
-        return deterministic_embedding(body, dimensions=self.local_dimensions)
+            raise RuntimeError(f"Embedding provider failed: {exc}") from exc
 
     def embed_many(self, texts: Iterable[str | None]) -> list[list[float]]:
         return [self.embed_text(text) for text in texts]

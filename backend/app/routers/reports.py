@@ -62,6 +62,7 @@ async def process_report(
     verifier: Annotated[AuthenticatedUser, Depends(require_verifier)],
 ) -> ReportProcessResponse:
     report = await workflow.process_report(reportId, verifier)
+    default_warnings = report.ai_safety_warnings if report.ai_safety_warnings else ["Do not disclose reporter details."]
     ai = AiApiResult(
         category=report.category,
         risk_level=report.risk_level,
@@ -69,9 +70,11 @@ async def process_report(
         summary=report.summary or "",
         redacted_text=report.redacted_text or "",
         translated_text=report.translated_text or "",
-        recommended_mediator_action="Review with trusted local mediators before any public action.",
+        recommended_mediator_action=report.ai_recommended_mediator_action
+        or "Review with trusted local mediators before any public action.",
         confidence=report.confidence_score,
-        safety_warnings=["Do not disclose reporter details."],
+        needs_human_review=report.needs_human_review if report.needs_human_review is not None else True,
+        safety_warnings=default_warnings,
     )
     return ReportProcessResponse(
         report_id=report.id,

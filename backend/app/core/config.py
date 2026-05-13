@@ -2,6 +2,9 @@ import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 DEFAULT_CORS_ALLOW_ORIGINS = (
     "http://localhost:5173",
@@ -9,6 +12,9 @@ DEFAULT_CORS_ALLOW_ORIGINS = (
 )
 DEFAULT_CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 DEFAULT_CORS_ALLOW_HEADERS = ("Authorization", "Content-Type")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+load_dotenv(REPO_ROOT / ".env", override=False)
 
 
 @dataclass(frozen=True)
@@ -27,6 +33,7 @@ class Settings:
     openai_api_key: str | None
     openai_base_url: str | None
     openai_model: str
+    openai_max_output_tokens: int
     embedding_model: str
     embedding_dimensions: int | None
     embedding_input_type: str | None
@@ -36,6 +43,10 @@ class Settings:
     cors_allow_credentials: bool
     cors_allow_methods: tuple[str, ...]
     cors_allow_headers: tuple[str, ...]
+    demo_seed_enabled: bool
+    demo_seed_with_ai: bool
+    ai_allow_deterministic_fallback: bool
+    local_data_dir: Path
 
 
 def _parse_csv_setting(raw_value: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
@@ -104,6 +115,7 @@ def get_settings() -> Settings:
         openai_api_key=_optional_env("OPENAI_API_KEY"),
         openai_base_url=_optional_env("OPENAI_BASE_URL"),
         openai_model=os.getenv("OPENAI_MODEL", "gpt-5.5"),
+        openai_max_output_tokens=int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "1200")),
         embedding_model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
         embedding_dimensions=_optional_int_env("EMBEDDING_DIMENSIONS"),
         embedding_input_type=_optional_env("EMBEDDING_INPUT_TYPE"),
@@ -125,4 +137,21 @@ def get_settings() -> Settings:
             os.getenv("CORS_ALLOW_HEADERS"),
             DEFAULT_CORS_ALLOW_HEADERS,
         ),
+        demo_seed_enabled=_demo_seed_enabled_default(),
+        demo_seed_with_ai=_parse_bool_setting(os.getenv("DEMO_SEED_WITH_AI"), False),
+        ai_allow_deterministic_fallback=_parse_bool_setting(
+            os.getenv("AI_ALLOW_DETERMINISTIC_FALLBACK"),
+            False,
+        ),
+        local_data_dir=Path(os.getenv("LOCAL_DATA_DIR", ".local-data")),
     )
+
+
+def _demo_seed_enabled_default() -> bool:
+    raw_demo = os.getenv("DEMO_SEED_ENABLED")
+    if raw_demo is not None:
+        return _parse_bool_setting(raw_demo, False)
+    env = os.getenv("ENV", "dev").strip().lower()
+    if env == "test":
+        return False
+    return env == "dev"

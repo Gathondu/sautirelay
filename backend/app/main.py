@@ -2,9 +2,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from backend.app.core.config import get_settings
-from backend.app.repositories.memory import InMemorySautiRelayRepository
+from backend.app.repositories.memory import InMemorySautiRelayRepository, LocalJsonSautiRelayRepository
 from backend.app.routers import auth, clusters, dashboard, escalations, reports, status
 from backend.app.services.auth import AuthService
+from backend.app.services.demo_seed import run_demo_seed
 from backend.app.services.workflow import WorkflowService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,10 +14,15 @@ from fastapi.middleware.cors import CORSMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    repository = InMemorySautiRelayRepository()
+    if settings.environment == "test":
+        repository = InMemorySautiRelayRepository()
+    else:
+        repository = LocalJsonSautiRelayRepository(settings.local_data_dir)
     app.state.repository = repository
     app.state.auth_service = AuthService(settings)
     app.state.workflow_service = WorkflowService(repository)
+    if settings.demo_seed_enabled:
+        await run_demo_seed(repository, app.state.workflow_service, settings)
     yield
 
 

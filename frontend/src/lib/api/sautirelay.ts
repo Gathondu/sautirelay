@@ -142,6 +142,8 @@ export type EscalationItem = {
   assigned_to?: string;
   actionBrief?: string;
   action_brief?: string;
+  safetyNote?: string;
+  safety_note?: string;
   urgency: Urgency;
   status: string;
 };
@@ -167,6 +169,22 @@ export type EscalationCreateRequest = {
   safetyNote: string;
   urgency: Urgency;
   followUpDueAt: string;
+};
+
+export type OutcomeCreateRequest = {
+  outcomeType:
+    | 'DIALOGUE_HELD'
+    | 'REFERRED_TO_PARTNER'
+    | 'FALSE_ALARM'
+    | 'RISK_REDUCED'
+    | 'VIOLENCE_OCCURRED'
+    | 'NEEDS_FOLLOW_UP'
+    | 'NO_ACTION_POSSIBLE'
+    | 'OTHER';
+  notes: string;
+  deescalated: boolean;
+  followUpRequired: boolean;
+  safetyConcerns?: string;
 };
 
 export type DashboardMetrics = {
@@ -243,6 +261,25 @@ export function getReport(token: string, reportId: string): Promise<ReportDetail
   });
 }
 
+export function processReport(token: string, reportId: string): Promise<unknown> {
+  return request<unknown>(`/reports/${encodeURIComponent(reportId)}/process`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function verifyReport(token: string, reportId: string, payload: VerificationRequest): Promise<unknown> {
+  return request<unknown>(`/reports/${encodeURIComponent(reportId)}/verify`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getCluster(token: string, clusterId: string): Promise<ClusterDetail> {
   return request<ClusterDetail>(`/clusters/${encodeURIComponent(clusterId)}`, {
     headers: {
@@ -284,6 +321,25 @@ export async function listEscalations(token: string): Promise<{ items: Escalatio
 
   if (Array.isArray(data)) return { items: data, total: data.length };
   return data;
+}
+
+export function acceptEscalation(token: string, escalationId: string): Promise<EscalationItem> {
+  return request<EscalationItem>(`/escalations/${encodeURIComponent(escalationId)}/accept`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function recordOutcome(token: string, escalationId: string, payload: OutcomeCreateRequest): Promise<unknown> {
+  return request<unknown>(`/escalations/${encodeURIComponent(escalationId)}/outcome`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getMetrics(token: string): Promise<DashboardMetrics> {

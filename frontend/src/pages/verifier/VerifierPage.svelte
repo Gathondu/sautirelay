@@ -6,11 +6,14 @@
     listClusters,
     listReports,
     login,
+    processReport,
     type ClusterDetail,
     type ClusterItem,
     type ReportDetail,
     type ReportItem,
     type Urgency,
+    verifyCluster,
+    verifyReport,
   } from '../../lib/api/sautirelay';
   import styles from '../operations.module.css';
 
@@ -37,6 +40,7 @@
   let urgency = $state<Urgency>('THIS_WEEK');
   let followUpDueAt = $state('');
   let isSubmittingEscalation = $state(false);
+  let isSubmittingDecision = $state(false);
 
   const urgencyOptions: Urgency[] = ['UNKNOWN', 'ROUTINE', 'THIS_WEEK', 'WITHIN_24_HOURS', 'IMMEDIATE'];
 
@@ -85,6 +89,7 @@
     urgency = 'THIS_WEEK';
     followUpDueAt = '';
     isSubmittingEscalation = false;
+    isSubmittingDecision = false;
   }
 
   function isAwaitingAi(report: ReportItem): boolean {
@@ -191,6 +196,68 @@
       isSubmittingEscalation = false;
     }
   }
+
+  async function processSelectedReport(): Promise<void> {
+    if (selectedType !== 'report' || !selectedId || !verifierToken) return;
+
+    isSubmittingDecision = true;
+    modalError = '';
+    modalSuccess = '';
+    try {
+      await processReport(verifierToken, selectedId);
+      selectedReportDetail = await getReport(verifierToken, selectedId);
+      modalSuccess = 'AI intake completed for this report.';
+      await loadVerifierQueue();
+    } catch (error) {
+      modalError = error instanceof Error ? error.message : 'Unable to process report with AI.';
+    } finally {
+      isSubmittingDecision = false;
+    }
+  }
+
+  async function verifySelectedReport(): Promise<void> {
+    if (selectedType !== 'report' || !selectedId || !verifierToken) return;
+
+    isSubmittingDecision = true;
+    modalError = '';
+    modalSuccess = '';
+    try {
+      await verifyReport(verifierToken, selectedId, {
+        decision: 'VERIFIED',
+        notes: 'Verified through trusted local review.',
+        confidence: 0.85,
+      });
+      selectedReportDetail = await getReport(verifierToken, selectedId);
+      modalSuccess = 'Report marked as verified.';
+      await loadVerifierQueue();
+    } catch (error) {
+      modalError = error instanceof Error ? error.message : 'Unable to verify report.';
+    } finally {
+      isSubmittingDecision = false;
+    }
+  }
+
+  async function verifySelectedCluster(): Promise<void> {
+    if (selectedType !== 'cluster' || !selectedId || !verifierToken) return;
+
+    isSubmittingDecision = true;
+    modalError = '';
+    modalSuccess = '';
+    try {
+      await verifyCluster(verifierToken, selectedId, {
+        decision: 'VERIFIED',
+        notes: 'Cluster verified through trusted local review.',
+        confidence: 0.85,
+      });
+      selectedClusterDetail = await getCluster(verifierToken, selectedId);
+      modalSuccess = 'Cluster marked as verified.';
+      await loadVerifierQueue();
+    } catch (error) {
+      modalError = error instanceof Error ? error.message : 'Unable to verify cluster.';
+    } finally {
+      isSubmittingDecision = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -294,6 +361,24 @@
             {:else}
               <p class={styles.muted}>No safety warnings.</p>
             {/if}
+            <div class={styles.inlineActions}>
+              <button
+                class={styles.buttonSecondary}
+                type="button"
+                disabled={isSubmittingDecision}
+                onclick={processSelectedReport}
+              >
+                Run AI intake
+              </button>
+              <button
+                class={styles.button}
+                type="button"
+                disabled={isSubmittingDecision}
+                onclick={verifySelectedReport}
+              >
+                Mark verified
+              </button>
+            </div>
           {/if}
 
           {#if selectedType === 'report' && !selectedReportDetail && selectedReportPreview}
@@ -309,6 +394,16 @@
                 ? 'This report is awaiting AI response. Please check again shortly.'
                 : 'Detailed report content is not available yet for this item.'}
             </p>
+            {#if isAwaitingAi(selectedReportPreview)}
+              <button
+                class={styles.button}
+                type="button"
+                disabled={isSubmittingDecision}
+                onclick={processSelectedReport}
+              >
+                Run AI intake
+              </button>
+            {/if}
           {/if}
 
           {#if selectedType === 'cluster' && selectedClusterDetail}
@@ -341,6 +436,17 @@
             {:else}
               <p class={styles.muted}>No linked reports.</p>
             {/if}
+
+            <div class={styles.inlineActions}>
+              <button
+                class={styles.buttonSecondary}
+                type="button"
+                disabled={isSubmittingDecision}
+                onclick={verifySelectedCluster}
+              >
+                Mark cluster verified
+              </button>
+            </div>
 
             <h3>Escalate to mediator</h3>
             <label class={styles.field}>

@@ -27,6 +27,7 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
       env: {
+        ENV: 'test',
         CORS_ALLOW_ORIGINS: frontendOrigins,
       },
     },

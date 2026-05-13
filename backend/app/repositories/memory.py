@@ -1,5 +1,6 @@
 from collections import Counter
 from copy import deepcopy
+from pathlib import Path
 from typing import Protocol
 
 from backend.app.core.models import (
@@ -23,6 +24,7 @@ class SautiRelayRepository(Protocol):
     async def get_report_by_tracking_code(self, tracking_code: str) -> ReportDocument | None: ...
     async def list_reports(self, status: ReportStatus | None = None) -> list[ReportDocument]: ...
     async def put_cluster(self, cluster: SignalClusterDocument) -> SignalClusterDocument: ...
+    async def delete_cluster(self, cluster_id: str) -> None: ...
     async def get_cluster(self, cluster_id: str) -> SignalClusterDocument | None: ...
     async def list_clusters(self) -> list[SignalClusterDocument]: ...
     async def put_verification(self, verification: VerificationDocument) -> VerificationDocument: ...
@@ -73,6 +75,9 @@ class InMemorySautiRelayRepository:
         stored = deepcopy(cluster)
         self._clusters[stored.id] = stored
         return deepcopy(stored)
+
+    async def delete_cluster(self, cluster_id: str) -> None:
+        self._clusters.pop(cluster_id, None)
 
     async def get_cluster(self, cluster_id: str) -> SignalClusterDocument | None:
         cluster = self._clusters.get(cluster_id)
@@ -145,3 +150,99 @@ class InMemorySautiRelayRepository:
             outcomes_total=len(self._outcomes),
             high_risk_reports=high_risk,
         )
+
+
+class LocalJsonSautiRelayRepository(InMemorySautiRelayRepository):
+    """JSON-backed local repository shaped like the future DynamoDB document store."""
+
+    def __init__(self, data_dir: Path) -> None:
+        super().__init__()
+        self._data_file = data_dir / "sautirelay-local-store.json"
+        self._data_file.parent.mkdir(parents=True, exist_ok=True)
+        self._load()
+
+    async def put_report(self, report: ReportDocument) -> ReportDocument:
+        stored = await super().put_report(report)
+        self._save()
+        return stored
+
+    async def put_cluster(self, cluster: SignalClusterDocument) -> SignalClusterDocument:
+        stored = await super().put_cluster(cluster)
+        self._save()
+        return stored
+
+    async def delete_cluster(self, cluster_id: str) -> None:
+        await super().delete_cluster(cluster_id)
+        self._save()
+
+    async def put_verification(self, verification: VerificationDocument) -> VerificationDocument:
+        stored = await super().put_verification(verification)
+        self._save()
+        return stored
+
+    async def put_escalation(self, escalation: EscalationDocument) -> EscalationDocument:
+        stored = await super().put_escalation(escalation)
+        self._save()
+        return stored
+
+    async def put_outcome(self, outcome: OutcomeDocument) -> OutcomeDocument:
+        stored = await super().put_outcome(outcome)
+        self._save()
+        return stored
+
+    async def append_audit_log(self, event: AuditLogDocument) -> AuditLogDocument:
+        stored = await super().append_audit_log(event)
+        self._save()
+        return stored
+
+    def _load(self) -> None:
+        if not self._data_file.exists():
+            return
+
+        import json
+
+        raw = json.loads(self._data_file.read_text(encoding="utf-8"))
+        self._reports = {item["reportId"]: ReportDocument.model_validate(item) for item in raw.get("reports", [])}
+        self._tracking_index = {report.public_tracking_code: report.id for report in self._reports.values()}
+        self._clusters = {
+            item["clusterId"]: SignalClusterDocument.model_validate(item) for item in raw.get("clusters", [])
+        }
+        self._verifications = {
+            item["id"]: VerificationDocument.model_validate(item) for item in raw.get("verifications", [])
+        }
+        self._escalations = {
+            item["escalationId"]: EscalationDocument.model_validate(item) for item in raw.get("escalations", [])
+        }
+        self._outcomes = {item["outcomeId"]: OutcomeDocument.model_validate(item) for item in raw.get("outcomes", [])}
+        self._audit_logs = {item["id"]: AuditLogDocument.model_validate(item) for item in raw.get("auditLogs", [])}
+
+    def _save(self) -> None:
+        import json
+        import os
+        import tempfile
+
+        payload = {
+            "reports": [_dump_report(item) for item in self._reports.values()],
+            "clusters": [item.model_dump(mode="json", by_alias=True) for item in self._clusters.values()],
+            "verifications": [item.model_dump(mode="json", by_alias=True) for item in self._verifications.values()],
+            "escalations": [item.model_dump(mode="json", by_alias=True) for item in self._escalations.values()],
+            "outcomes": [item.model_dump(mode="json", by_alias=True) for item in self._outcomes.values()],
+            "auditLogs": [item.model_dump(mode="json", by_alias=True) for item in self._audit_logs.values()],
+        }
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=self._data_file.parent,
+            delete=False,
+        ) as handle:
+            json.dump(payload, handle, ensure_ascii=True, indent=2, sort_keys=True)
+            handle.write("\n")
+            temp_name = handle.name
+        os.replace(temp_name, self._data_file)
+
+
+def _dump_report(report: ReportDocument) -> dict[str, object]:
+    payload = report.model_dump(mode="json", by_alias=True)
+    if report.embedding is not None:
+        payload["embedding"] = report.embedding
+    return payload
