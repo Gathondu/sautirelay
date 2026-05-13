@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,7 +15,7 @@ from backend.app.core.models import (
 )
 from backend.app.repositories.dynamodb import DynamoDbSautiRelayRepository
 from backend.app.repositories.memory import InMemorySautiRelayRepository
-from backend.app.services.demo_seed import seed_demo_data
+from backend.app.services.demo_seed import DEMO_SEED_SENTINEL_REPORT_ID, run_demo_seed, seed_demo_data
 from backend.app.services.s3_vectors import S3VectorStore, validate_s3_vectors_region
 
 
@@ -147,6 +148,53 @@ def test_demo_seed_embeddings_match_configured_vector_dimensions() -> None:
     seeded_embeddings = [report.embedding for report in reports if report.embedding is not None]
     assert seeded_embeddings
     assert {len(embedding) for embedding in seeded_embeddings} == {1536}
+
+
+def test_run_demo_seed_skips_existing_seeded_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = InMemorySautiRelayRepository()
+    sentinel = _report().model_copy(
+        update={
+            "id": DEMO_SEED_SENTINEL_REPORT_ID,
+            "public_tracking_code": "SR-DEMO03",
+        }
+    )
+    _run(repository.put_report(sentinel))
+
+    async def fail_seed(*args: object, **kwargs: object) -> None:
+        raise AssertionError("seed_demo_data should not run when demo data already exists")
+
+    monkeypatch.setattr("backend.app.services.demo_seed.seed_demo_data", fail_seed)
+
+    settings = SimpleNamespace(
+        embedding_dimensions=1536,
+        demo_seed_with_ai=True,
+        openai_api_key="test-key",
+        verifier_username="verifier@sautirelay.dev",
+    )
+
+    _run(run_demo_seed(repository, workflow=object(), settings=settings))  # type: ignore[arg-type]
+
+
+def test_run_demo_seed_skips_ai_hydration_for_persistent_repository() -> None:
+    repository = InMemorySautiRelayRepository()
+
+    class FailingWorkflow:
+        async def process_report(self, *args: object, **kwargs: object) -> None:
+            raise AssertionError("startup demo seed should not call AI hydration for DynamoDB")
+
+    settings = SimpleNamespace(
+        embedding_dimensions=1536,
+        repository_backend="dynamodb",
+        demo_seed_with_ai=True,
+        openai_api_key="test-key",
+        verifier_username="verifier@sautirelay.dev",
+    )
+
+    _run(run_demo_seed(repository, workflow=FailingWorkflow(), settings=settings))  # type: ignore[arg-type]
+    reports = _run(repository.list_reports())
+
+    assert reports
+    assert {len(report.embedding or []) for report in reports if report.embedding} == {1536}
 
 
 def test_lambda_handler_is_callable() -> None:

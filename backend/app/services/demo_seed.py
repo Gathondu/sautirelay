@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Subset of demo reports to run through real AI when DEMO_SEED_WITH_AI=1 and OPENAI_API_KEY is set.
 DEMO_AI_PROCESS_IDS: tuple[str, ...] = ("demo_report_new_water", "demo_report_new_aid")
+DEMO_SEED_SENTINEL_REPORT_ID = "demo_report_pr_water_a"
 
 
 def _loc(*, area: str, country: str = "Kenya", admin1: str = "Machakos") -> ApproximateLocation:
@@ -371,7 +372,14 @@ async def run_demo_seed(
     workflow: WorkflowService,
     settings: Settings,
 ) -> None:
+    if await repository.get_report(DEMO_SEED_SENTINEL_REPORT_ID) is not None:
+        logger.info("Demo seed data already exists; skipping startup seed.")
+        return
+
     await seed_demo_data(repository, embedding_dimensions=settings.embedding_dimensions or 96)
+    if settings.repository_backend == "dynamodb":
+        logger.info("Skipping demo seed AI hydration during persistent repository startup.")
+        return
     if not settings.demo_seed_with_ai or not settings.openai_api_key:
         return
     verifier = AuthenticatedUser(

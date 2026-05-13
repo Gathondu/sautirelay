@@ -69,6 +69,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          embedding_extra_body="${EMBEDDING_EXTRA_BODY:-}"
+          embedding_extra_headers="${EMBEDDING_EXTRA_HEADERS:-}"
+          if [ -z "$embedding_extra_body" ]; then
+            embedding_extra_body="{}"
+          fi
+          if [ -z "$embedding_extra_headers" ]; then
+            embedding_extra_headers="{}"
+          fi
+          jq -e 'type == "object"' <<< "$embedding_extra_body" >/dev/null
+          jq -e 'type == "object"' <<< "$embedding_extra_headers" >/dev/null
           {
             echo "TF_VAR_project_name=${PROJECT_NAME:-sautirelay}"
             echo "TF_VAR_environment=${ENVIRONMENT:-prod}"
@@ -84,8 +94,10 @@ jobs:
             echo "TF_VAR_openai_max_output_tokens=${OPENAI_MAX_OUTPUT_TOKENS:-1200}"
             echo "TF_VAR_embedding_model=${EMBEDDING_MODEL:-text-embedding-3-small}"
             echo "TF_VAR_embedding_input_type=${EMBEDDING_INPUT_TYPE:-}"
-            echo "TF_VAR_embedding_extra_body=${EMBEDDING_EXTRA_BODY:-{}}"
-            echo "TF_VAR_embedding_extra_headers=${EMBEDDING_EXTRA_HEADERS:-{}}"
+            echo "EMBEDDING_EXTRA_BODY=$embedding_extra_body"
+            echo "EMBEDDING_EXTRA_HEADERS=$embedding_extra_headers"
+            echo "TF_VAR_embedding_extra_body=$embedding_extra_body"
+            echo "TF_VAR_embedding_extra_headers=$embedding_extra_headers"
             echo "TF_VAR_cors_allow_credentials=${CORS_ALLOW_CREDENTIALS:-false}"
             echo "TF_VAR_cors_allow_methods=${CORS_ALLOW_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}"
             echo "TF_VAR_cors_allow_headers=${CORS_ALLOW_HEADERS:-Authorization,Content-Type}"
@@ -285,6 +297,16 @@ jobs:
           DYNAMODB_TABLE_NAME="$(terraform output -raw dynamodb_table_name)"
           S3_VECTOR_BUCKET_NAME="$(terraform output -raw s3_vector_bucket_name)"
           S3_VECTOR_INDEX_NAME="$(terraform output -raw s3_vector_index_name)"
+          embedding_extra_body="${EMBEDDING_EXTRA_BODY:-}"
+          embedding_extra_headers="${EMBEDDING_EXTRA_HEADERS:-}"
+          if [ -z "$embedding_extra_body" ]; then
+            embedding_extra_body="{}"
+          fi
+          if [ -z "$embedding_extra_headers" ]; then
+            embedding_extra_headers="{}"
+          fi
+          jq -e 'type == "object"' <<< "$embedding_extra_body" >/dev/null
+          jq -e 'type == "object"' <<< "$embedding_extra_headers" >/dev/null
           ENVIRONMENT_JSON="$(jq -n \
             --arg env "${ENVIRONMENT:-prod}" \
             --arg region "${AWS_REGION:-af-south-1}" \
@@ -297,8 +319,8 @@ jobs:
             --arg embedding_model "${EMBEDDING_MODEL:-text-embedding-3-small}" \
             --arg embedding_dimensions "${EMBEDDING_DIMENSIONS:-1536}" \
             --arg embedding_input_type "${EMBEDDING_INPUT_TYPE:-}" \
-            --arg embedding_extra_body "${EMBEDDING_EXTRA_BODY:-{}}" \
-            --arg embedding_extra_headers "${EMBEDDING_EXTRA_HEADERS:-{}}" \
+            --arg embedding_extra_body "$embedding_extra_body" \
+            --arg embedding_extra_headers "$embedding_extra_headers" \
             --arg cors_allow_credentials "${CORS_ALLOW_CREDENTIALS:-false}" \
             --arg cors_allow_origins "${CORS_ALLOW_ORIGINS:-*}" \
             --arg cors_allow_methods "${CORS_ALLOW_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}" \

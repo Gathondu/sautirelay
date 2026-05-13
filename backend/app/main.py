@@ -40,8 +40,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.repository = repository
     app.state.auth_service = AuthService(settings)
     app.state.workflow_service = WorkflowService(repository)
-    if settings.demo_seed_enabled:
+    if settings.demo_seed_enabled and not getattr(app.state, "demo_seed_completed", False):
         await run_demo_seed(repository, app.state.workflow_service, settings)
+        app.state.demo_seed_completed = True
     yield
 
 
