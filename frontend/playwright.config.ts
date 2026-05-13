@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const frontendPort = 5176;
 const backendPort = 8001;
+const frontendOrigins = [`http://127.0.0.1:${frontendPort}`, `http://localhost:${frontendPort}`].join(',');
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -25,6 +26,9 @@ export default defineConfig({
       url: `http://127.0.0.1:${backendPort}/status`,
       reuseExistingServer: true,
       timeout: 30_000,
+      env: {
+        SAUTIRELAY_CORS_ALLOW_ORIGINS: frontendOrigins,
+      },
     },
     {
       command: `pnpm exec vite dev --host 127.0.0.1 --port ${frontendPort}`,
